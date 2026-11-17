@@ -652,7 +652,7 @@ function rebuildAutoEvents_(recordsSheet, eventsSheet, now) {
 
   if (oldValues.length > 1) {
     for (let i = 1; i < oldValues.length; i++) {
-      oldDiscovered[oldValues[i][0]] = oldValues[i][25] || now.toISOString();
+      oldDiscovered[oldValues[i][0]] = oldValues[i][26] || now.toISOString();
     }
   }
 
