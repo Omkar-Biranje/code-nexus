@@ -50,6 +50,7 @@ function onOpen() {
 
 function setupCodeNexus() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  PropertiesService.getScriptProperties().setProperty("CN_SPREADSHEET_ID", ss.getId());
   Object.keys(CN_HEADERS).forEach(function (name) {
     let sheet = ss.getSheetByName(name);
     if (!sheet) sheet = ss.insertSheet(name);
@@ -79,6 +80,14 @@ function setupCodeNexus() {
   );
 }
 
+function getSpreadsheet_() {
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty("CN_SPREADSHEET_ID");
+  if (!spreadsheetId) {
+    throw new Error("Run setupCodeNexus from the bound spreadsheet before deploying the web app.");
+  }
+  return SpreadsheetApp.openById(spreadsheetId);
+}
+
 function ingestApprovedFeeds() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) {
@@ -86,7 +95,7 @@ function ingestApprovedFeeds() {
   }
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getSpreadsheet_();
     ensureWorkbook_();
     const sourceSheet = ss.getSheetByName(CN_SHEETS.SOURCES);
     const candidateSheet = ss.getSheetByName(CN_SHEETS.CANDIDATES);
@@ -174,12 +183,7 @@ function ingestApprovedFeeds() {
     }
 
     logRun_("INGEST_COMPLETE", "", "OK", totalFound, totalAdded, "No candidate was auto-published.");
-    SpreadsheetApp.getActiveSpreadsheet().toast(
-      totalAdded + " new candidate(s) added. All require human review.",
-      "CODE NEXUS intake",
-      8
-    );
-  } finally {
+    } finally {
     lock.releaseLock();
   }
 }
@@ -226,7 +230,7 @@ function doGet(request) {
 }
 
 function getPublicEvents_() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CN_SHEETS.PUBLISHED);
+  const sheet = getSpreadsheet_().getSheetByName(CN_SHEETS.PUBLISHED);
   if (!sheet || sheet.getLastRow() < 2) return [];
 
   const values = sheet.getDataRange().getDisplayValues();
@@ -349,7 +353,7 @@ function updateSourceStatus_(sheet, rowNumber, checkedAt, result) {
 }
 
 function ensureWorkbook_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   Object.keys(CN_HEADERS).forEach(function (name) {
     let sheet = ss.getSheetByName(name);
     if (!sheet) sheet = ss.insertSheet(name);
@@ -407,7 +411,7 @@ function sha256Hex_(value) {
 }
 
 function logRun_(action, sourceName, result, found, added, details) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CN_SHEETS.RUN_LOG);
+  const sheet = getSpreadsheet_().getSheetByName(CN_SHEETS.RUN_LOG);
   if (!sheet) return;
   sheet.appendRow([
     new Date(),
