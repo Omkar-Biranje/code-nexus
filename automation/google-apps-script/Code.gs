@@ -303,14 +303,15 @@ function fetchSource_(sourceName, sourceType, endpoint) {
 
 function fetchHackalendar_(sourceName, endpoint) {
   const output = [];
-  const fromDate = Utilities.formatDate(new Date(), "UTC", "yyyy-MM-dd");
+  let offset = 0;
 
+  // Current public API supports up to 200 rows per page and returns
+  // meta.hasMore + meta.nextOffset. Cap the import at five pages per run.
   for (let page = 0; page < CN.MAX_HACKALENDAR_PAGES; page++) {
     const url = endpoint +
       (endpoint.indexOf("?") >= 0 ? "&" : "?") +
-      "from=" + encodeURIComponent(fromDate) +
-      "&limit=" + CN.PAGE_SIZE +
-      "&offset=" + (page * CN.PAGE_SIZE);
+      "limit=" + CN.PAGE_SIZE +
+      "&offset=" + offset;
 
     const response = UrlFetchApp.fetch(url, {
       method: "get",
@@ -324,12 +325,12 @@ function fetchHackalendar_(sourceName, endpoint) {
       throw new Error("Hackalendar returned HTTP " + code + ".");
     }
 
-    const text = response.getContentText();
-    if (!text || text.length > 5 * 1024 * 1024) {
+    const responseText = response.getContentText();
+    if (!responseText || responseText.length > 5 * 1024 * 1024) {
       throw new Error("Hackalendar response was empty or larger than 5 MB.");
     }
 
-    const payload = JSON.parse(text);
+    const payload = JSON.parse(responseText);
     const rows = Array.isArray(payload.data) ? payload.data :
       (Array.isArray(payload.events) ? payload.events :
         (Array.isArray(payload.results) ? payload.results : []));
@@ -340,7 +341,16 @@ function fetchHackalendar_(sourceName, endpoint) {
     });
 
     const meta = payload.meta || {};
-    if (meta.hasMore !== true || !rows.length) break;
+    const nextOffset = Number(meta.nextOffset);
+    if (
+      meta.hasMore !== true ||
+      !rows.length ||
+      !Number.isFinite(nextOffset) ||
+      nextOffset <= offset
+    ) {
+      break;
+    }
+    offset = nextOffset;
   }
 
   return dedupeWithinSource_(output);
@@ -469,8 +479,8 @@ function normalizeJsonEvent_(item, sourceName, sourceEndpoint) {
     city: cleanText_(firstValue_(item, ["city", "location"]), 100),
     registrationDeadline: cleanText_(firstValue_(item, ["registrationDeadline", "registration_deadline", "registrationClosesAt"]), 100),
     submissionDeadline: cleanText_(firstValue_(item, ["submissionDeadline", "submission_deadline"]), 100),
-    eventStart: cleanText_(firstValue_(item, ["startAt", "start_at", "eventStart", "event_start", "startDate"]), 100),
-    eventEnd: cleanText_(firstValue_(item, ["endAt", "end_at", "eventEnd", "event_end", "endDate"]), 100),
+    eventStart: cleanText_(firstValue_(item, ["startAt", "startsAt", "start_at", "eventStart", "event_start", "startDate"]), 100),
+    eventEnd: cleanText_(firstValue_(item, ["endAt", "endsAt", "end_at", "eventEnd", "event_end", "endDate"]), 100),
     timezone: cleanText_(firstValue_(item, ["timezone", "eventTimezone", "event_timezone"]), 80),
     skills: skills,
     teamSize: cleanText_(firstValue_(item, ["teamSize", "team_size", "team"]), 80),
