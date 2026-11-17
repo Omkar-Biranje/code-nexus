@@ -1,7 +1,9 @@
 /**
  * CODE NEXUS — Automatic hackathon discovery.
  *
- * No per-event manual entry or approval is required.
+ * Feed discovery runs automatically after one-time owner setup. No per-event
+ * manual entry is needed for feed-sourced records. Public organizer submissions
+ * enter a separate review queue and are never auto-published as verified.
  * Sources are fetched daily, normalized, deduplicated and cross-matched.
  * Public records retain source attribution and honest verification labels.
  *
@@ -22,6 +24,8 @@ const CN = {
     SOURCES: "Sources",
     SOURCE_RECORDS: "SourceRecords",
     AUTO_EVENTS: "AutoEvents",
+    EVENT_HISTORY: "EventHistory",
+    INTAKE_QUEUE: "OrganizerIntake",
     RUN_LOG: "RunLog",
   },
   HEADERS: {
@@ -39,6 +43,15 @@ const CN = {
       "Entry fee", "Currency", "Prize amount", "Prize currency", "Official URL",
       "Source URL", "Source names", "Source count", "Conflicting fields", "Attribution",
       "Discovery / verification status", "Discovered at", "Last checked at",
+      "Source platforms", "Eligibility", "Cancelled",
+    ],
+    EventHistory: [
+      "Timestamp", "Change type", "Event key", "Event title", "Field",
+      "Previous value", "New value", "Source platforms",
+    ],
+    OrganizerIntake: [
+      "Received at", "Official event URL", "Organizer / host",
+      "Additional context", "Review status", "Reviewer note",
     ],
     RunLog: [
       "Timestamp", "Action", "Source name", "Result", "Records fetched",
@@ -54,7 +67,7 @@ const CN = {
       "Public structured API. Link to the original organiser registration page; attribution to Hackalendar is appreciated.",
       24,
       "",
-      "Ready — runs daily",
+      "Pending first successful fetch",
     ],
     [
       true,
@@ -64,7 +77,7 @@ const CN = {
       "Source: Brabble. Refresh daily, preserve attribution and original source links; do not present its complete index as our own.",
       24,
       "",
-      "Ready — runs daily",
+      "Pending first successful fetch",
     ],
     [
       false,
@@ -133,6 +146,7 @@ function setupCodeNexus() {
   PropertiesService.getScriptProperties().setProperty("CN_SPREADSHEET_ID", ss.getId());
   ensureSheets_(ss);
   seedDefaultSources_(ss.getSheetByName(CN.SHEETS.SOURCES));
+  const organizerFormUrl = ensureOrganizerIntakeForm_(ss);
   installDailyRefresh();
   const summary = runDailyDiscovery();
 
@@ -141,7 +155,98 @@ function setupCodeNexus() {
     "Sources successful: " + summary.sourcesSucceeded + "\n" +
     "Events in index: " + summary.eventsPublished + "\n" +
     "Cross-source matches: " + summary.crossSourceMatches + "\n\n" +
-    "Daily refresh is installed. New events will be discovered automatically."
+    "Daily refresh is installed. New feed events will be discovered automatically.\n\n" +
+    "Optional organizer submission form:\n" + organizerFormUrl +
+    "\n\nSubmissions enter a review queue; they are not auto-published."
+  );
+}
+
+
+/**
+ * Create one optional organizer intake form. This is a proposal channel, not
+ * event registration; every submission waits in OrganizerIntake for review.
+ */
+function ensureOrganizerIntakeForm_(ss) {
+  const properties = PropertiesService.getScriptProperties();
+  let form = null;
+  const existingId = properties.getProperty("CN_ORGANIZER_FORM_ID");
+
+  if (existingId) {
+    try {
+      form = FormApp.openById(existingId);
+    } catch (error) {
+      properties.deleteProperty("CN_ORGANIZER_FORM_ID");
+    }
+  }
+
+  if (!form) {
+    form = FormApp.create("CODE NEXUS — Submit a hackathon");
+    properties.setProperty("CN_ORGANIZER_FORM_ID", form.getId());
+    form.setDescription(
+      "Suggest a public hackathon or builder opportunity for CODE NEXUS. " +
+      "This is not event registration. We link participants to the original organiser page. " +
+      "Submissions are checked before they can appear in discovery."
+    );
+    form.setConfirmationMessage(
+      "Thank you. Your event suggestion has been received for review. " +
+      "Please continue to use the organiser's official page for registrations."
+    );
+    form.addTextItem()
+      .setTitle("Official event or registration page URL")
+      .setHelpText("Use the organiser's original HTTPS event page, not a shortened link.")
+      .setRequired(true)
+      .setValidation(FormApp.createTextValidation().requireTextIsUrl().build());
+    form.addTextItem()
+      .setTitle("Organizer / host")
+      .setHelpText("Company, university, community or individual running the event.")
+      .setRequired(false);
+    form.addParagraphTextItem()
+      .setTitle("Additional context")
+      .setHelpText("Optional: event dates, eligibility, or a note about the opportunity.")
+      .setRequired(false);
+    form.setDestination(FormApp.DestinationType.SPREADSHEET, ss.getId());
+    form.setAcceptingResponses(true);
+  }
+
+  const hasTrigger = ScriptApp.getProjectTriggers().some(function (trigger) {
+    return trigger.getHandlerFunction() === "onOrganizerIntakeSubmit";
+  });
+  if (!hasTrigger) {
+    ScriptApp.newTrigger("onOrganizerIntakeSubmit").forForm(form).onFormSubmit().create();
+  }
+
+  return form.getPublishedUrl();
+}
+
+/** Queue organizer-submitted URLs for review; never fetch or publish them here. */
+function onOrganizerIntakeSubmit(event) {
+  if (!event || !event.response) return;
+  const answers = {};
+  event.response.getItemResponses().forEach(function (itemResponse) {
+    answers[itemResponse.getItem().getTitle()] = itemResponse.getResponse();
+  });
+
+  const eventUrl = String(answers["Official event or registration page URL"] || "").trim();
+  const organizer = cleanText_(answers["Organizer / host"], 180);
+  const context = cleanText_(answers["Additional context"], 1000);
+  const ss = getSpreadsheet_();
+  const sheet = ss.getSheetByName(CN.SHEETS.INTAKE_QUEUE);
+  const acceptedUrl = validHttpsUrl_(eventUrl) ? eventUrl : "";
+  sheet.appendRow([
+    event.response.getTimestamp(),
+    acceptedUrl,
+    organizer,
+    context,
+    acceptedUrl ? "REVIEW_REQUIRED" : "REJECTED_INVALID_URL",
+    acceptedUrl ? "" : "A public HTTPS URL is required.",
+  ]);
+  logRun_(
+    "ORGANIZER_SUBMISSION",
+    organizer || "Unknown organizer",
+    acceptedUrl ? "REVIEW_REQUIRED" : "REJECTED",
+    1,
+    0,
+    acceptedUrl ? "A suggested official URL was added to OrganizerIntake; it was not auto-published." : "Invalid URL submitted."
   );
 }
 
@@ -417,6 +522,9 @@ function fetchRss_(sourceName, endpoint) {
       title: title,
       organizer: getChildText_(node, ["organizer", "organiser", "creator", "author"]),
       summary: description,
+      platform: getChildText_(node, ["platform", "source_platform"]),
+      eligibility: getChildText_(node, ["eligibility", "audience"]),
+      cancelled: getChildText_(node, ["cancelled", "canceled"]),
       mode: getChildText_(node, ["mode", "event_mode"]),
       country: getChildText_(node, ["country"]),
       city: getChildText_(node, ["city", "location"]),
@@ -480,6 +588,9 @@ function normalizeJsonEvent_(item, sourceName, sourceEndpoint) {
     title: title,
     organizer: cleanText_(firstValue_(item, ["organizer", "organiser", "host", "organization"]), 180),
     summary: cleanText_(firstValue_(item, ["summary", "description", "excerpt"]), 1200),
+    platform: cleanText_(firstValue_(item, ["platform", "sourcePlatform", "source_platform"]), 100),
+    eligibility: cleanText_(firstValue_(item, ["eligibility", "audience"]), 500),
+    cancelled: String(firstValue_(item, ["cancelled", "canceled"]) || "").toLowerCase() === "true",
     mode: cleanText_(firstValue_(item, ["mode", "format", "eventMode"]), 60),
     country: cleanText_(firstValue_(item, ["country", "countryCode"]), 80),
     city: cleanText_(firstValue_(item, ["city", "location"]), 100),
@@ -520,9 +631,10 @@ function directChild_(node, targetName) {
 }
 
 function getChildText_(node, names) {
+  const wanted = names.map(function (name) { return String(name).toLowerCase(); });
   const children = node.getChildren();
   for (let i = 0; i < children.length; i++) {
-    if (names.indexOf(children[i].getName()) !== -1) {
+    if (wanted.indexOf(children[i].getName().toLowerCase()) !== -1) {
       return children[i].getText();
     }
   }
@@ -576,13 +688,14 @@ function getHost_(value) {
 
 function isAllowedSourceEndpoint_(value, sourceType) {
   const host = getHost_(value);
+  const path = String(value || "").replace(/^https:\/\/[^/]+/i, "").split(/[?#]/)[0];
   if (!host) return false;
 
   if (sourceType === "HACKALENDAR_JSON") {
-    return host === "hackalendar.com" || host.endsWith(".hackalendar.com");
+    return host === "hackalendar.com" && path === "/api/events";
   }
   if (sourceType === "RSS") {
-    return host === "brabble.ai" || host.endsWith(".brabble.ai");
+    return host === "brabble.ai" && path === "/rss/hackathons.xml";
   }
   return false;
 }
@@ -632,7 +745,11 @@ function cleanText_(value, maxLength) {
 
 function canonicalUrl_(value) {
   if (!validHttpsUrl_(value)) return "";
-  return String(value).trim().replace(/#.*$/, "");
+  let url = String(value).trim().replace(/#.*$/, "");
+  url = url.replace(/([?&])(utm_[^=]+|fbclid|gclid|mc_cid|mc_eid|ref|referrer)=[^&]*/gi, "");
+  url = url.replace(/\?&/g, "?").replace(/[?&]$/, "");
+  url = url.replace(/^https:\/\/([^/]+)/i, function (_, host) { return "https://" + host.toLowerCase(); });
+  return url.replace(/\/$/, "");
 }
 
 function eventKey_(event) {
@@ -714,7 +831,7 @@ function rebuildAutoEvents_(recordsSheet, eventsSheet, now) {
     const fieldsToCompare = [
       "organizer", "registrationDeadline", "submissionDeadline",
       "eventStart", "eventEnd", "timezone", "mode", "country", "city",
-      "teamSize", "fee", "currency", "prizeAmount", "prizeCurrency",
+      "teamSize", "fee", "currency", "prizeAmount", "prizeCurrency", "cancelled",
     ];
     fieldsToCompare.forEach(function (field) {
       const rawValue = cleanText_(item[field], 160);
@@ -733,6 +850,10 @@ function rebuildAutoEvents_(recordsSheet, eventsSheet, now) {
     });
     if (values[i][0] && event.sourceNames.indexOf(values[i][0]) === -1) {
       event.sourceNames.push(values[i][0]);
+    }
+    if (!event.platforms) event.platforms = [];
+    if (item.platform && event.platforms.indexOf(item.platform) === -1) {
+      event.platforms.push(item.platform);
     }
     const sourceUrl = item.sourceUrl || values[i][3];
     if (sourceUrl && event.sourceUrls.indexOf(sourceUrl) === -1) {
@@ -818,8 +939,11 @@ function rebuildAutoEvents_(recordsSheet, eventsSheet, now) {
       event.prizeCurrency, event.officialUrl, event.sourceUrl, event.sourceNames,
       event.sourceCount, event.conflictingFields, event.attribution,
       event.discoveryStatus, event.discoveredAt, event.lastCheckedAt,
+      event.platforms || [], event.eligibility || "", !!event.cancelled,
     ];
   });
+
+  logEventChanges_(oldValues, output, eventsSheet.getParent().getSheetByName(CN.SHEETS.EVENT_HISTORY), now);
 
   if (eventsSheet.getLastRow() > 1) {
     eventsSheet.getRange(2, 1, eventsSheet.getLastRow() - 1, CN.HEADERS.AutoEvents.length).clearContent();
@@ -828,6 +952,66 @@ function rebuildAutoEvents_(recordsSheet, eventsSheet, now) {
     eventsSheet.getRange(2, 1, rows.length, CN.HEADERS.AutoEvents.length).setValues(rows);
   }
   return output;
+}
+
+
+function logEventChanges_(oldValues, newEvents, historySheet, now) {
+  const oldEvents = {};
+  if (oldValues.length > 1) {
+    const headers = oldValues[0];
+    const index = {};
+    headers.forEach(function (name, i) { index[name] = i; });
+    oldValues.slice(1).forEach(function (row) {
+      const key = row[index["Event key"]];
+      if (!key) return;
+      oldEvents[key] = {
+        organizer: row[index["Organizer"]] || "",
+        registrationDeadline: row[index["Registration deadline"]] || "",
+        eventStart: row[index["Event start"]] || "",
+        eventEnd: row[index["Event end"]] || "",
+        mode: row[index["Mode"]] || "",
+        officialUrl: row[index["Official URL"]] || "",
+        cancelled: row[index["Cancelled"]] || "",
+      };
+    });
+  }
+
+  const fields = [
+    ["organizer", "Organizer"],
+    ["registrationDeadline", "Registration deadline"],
+    ["eventStart", "Event start"],
+    ["eventEnd", "Event end"],
+    ["mode", "Mode"],
+    ["officialUrl", "Official URL"],
+    ["cancelled", "Cancelled"],
+  ];
+  const changes = [];
+
+  newEvents.forEach(function (event) {
+    const previous = oldEvents[event.eventKey];
+    if (!previous) {
+      changes.push([
+        now, "NEW_EVENT", event.eventKey, event.title, "New listing",
+        "", event.title, (event.platforms || []).join(", "),
+      ]);
+      return;
+    }
+    fields.forEach(function (field) {
+      const oldValue = String(previous[field[0]] || "");
+      const newValue = String(event[field[0]] || "");
+      if (comparableFieldValue_(field[0], oldValue) !== comparableFieldValue_(field[0], newValue)) {
+        changes.push([
+          now, "MATERIAL_UPDATE", event.eventKey, event.title, field[1],
+          oldValue, newValue, (event.platforms || []).join(", "),
+        ]);
+      }
+    });
+  });
+
+  if (changes.length) {
+    historySheet.getRange(historySheet.getLastRow() + 1, 1, changes.length, CN.HEADERS.EventHistory.length)
+      .setValues(changes);
+  }
 }
 
 function getPublicEvents_() {
@@ -850,10 +1034,9 @@ function getPublicEvents_() {
     if (read(row, "Public status") !== "AUTO_DISCOVERED") return;
 
     const registrationDeadline = read(row, "Registration deadline");
-    if (registrationDeadline) {
-      const deadline = Date.parse(registrationDeadline);
-      if (!isNaN(deadline) && deadline < now) return;
-    }
+    const eventStart = read(row, "Event start");
+    if (read(row, "Cancelled").toLowerCase() === "true") return;
+    if (isEventExpired_(registrationDeadline, eventStart, new Date(now), read(row, "Event timezone"))) return;
 
     events.push({
       title: read(row, "Title"),
@@ -874,6 +1057,9 @@ function getPublicEvents_() {
       currency: read(row, "Currency"),
       prizeAmount: read(row, "Prize amount"),
       prizeCurrency: read(row, "Prize currency"),
+      sourcePlatforms: read(row, "Source platforms"),
+      eligibility: read(row, "Eligibility"),
+      cancelled: read(row, "Cancelled").toLowerCase() === "true",
       officialUrl: read(row, "Official URL"),
       sourceUrl: read(row, "Source URL"),
       sourceNames: read(row, "Source names"),
@@ -888,6 +1074,26 @@ function getPublicEvents_() {
   return events;
 }
 
+function isEventExpired_(registrationDeadline, eventStart, now, timezone) {
+  const boundary = String(registrationDeadline || eventStart || "").trim();
+  if (!boundary) return false;
+
+  // Date-only deadlines remain open for their full local calendar day.
+  const dateOnly = boundary.match(/^(\d{4}-\d{2}-\d{2})$/);
+  if (dateOnly) {
+    let today;
+    try {
+      today = Utilities.formatDate(now, timezone || Session.getScriptTimeZone() || "UTC", "yyyy-MM-dd");
+    } catch (error) {
+      today = Utilities.formatDate(now, "UTC", "yyyy-MM-dd");
+    }
+    return dateOnly[1] < today;
+  }
+
+  const timestamp = Date.parse(boundary);
+  return !isNaN(timestamp) && timestamp < now.getTime();
+}
+
 function getSourceSummary_() {
   const sheet = getSpreadsheet_().getSheetByName(CN.SHEETS.SOURCES);
   if (!sheet || sheet.getLastRow() < 2) return [];
@@ -899,6 +1105,7 @@ function getSourceSummary_() {
       enabled: String(row[0]).toLowerCase() === "true",
       status: row[7] || "",
       lastCheckedAt: row[6] || "",
+      refreshHours: Number(row[5]) || 24,
     };
   });
 }
