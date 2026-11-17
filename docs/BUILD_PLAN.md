@@ -11,13 +11,56 @@
 
 Acceptance: private repository and documentation verified; no paid dependency required for initial build; builder has a documented free-tier two-way GitHub sync path; free hosting and database constraints are explicit.
 
-## Phase 1 — Application foundation and public discovery shell
+## Owner-prioritized presentation milestone — Phase 1A + 1B
+
+The owner requested a presentable public UI/UX and a Google-based event-intake demonstration before member accounts, teammate matching or project collaboration.
+
+### Phase 1A — Public UI/UX source prototype
+Committed source files:
+- package.json, index.html, vite.config.ts, tsconfig.json
+- src/main.tsx, src/App.tsx, src/index.css
+- src/data/demoEvents.ts, src/lib/googleFeed.ts
+
+Included in source:
+- React + TypeScript + Vite application foundation, Tailwind CSS plugin, React Router and lucide-react.
+- Premium, light-first responsive landing page and navigation.
+- Explore page with search, format and experience filters.
+- Clearly labelled illustrative event cards and sample detail pages.
+- How it works, About, Contact, Privacy, Terms, Accessibility and 404 routes.
+- A public Google-feed URL input on Explore.
+
+Current status: source committed to main. Dependency installation, build, type-check and browser QA have NOT yet been executed.
+
+### Phase 1B — Google Sheets / Apps Script intake prototype
+Committed source files:
+- automation/google-apps-script/Code.gs
+- automation/google-apps-script/README.md
+- docs/GOOGLE_APPS_SCRIPT_SETUP.md
+
+Intended flow:
+Official RSS/Atom feeds → Apps Script → Candidates sheet (Pending review) → human review → Published sheet (Published + Verified) → read-only JSONP endpoint → Explore page.
+
+Current status: source and setup instructions committed. No Google Sheet has been created, no feed source configured, no script authorized, no timer trigger installed, and no public endpoint deployed or tested. Gmail inbox access is not part of this prototype.
+
+Acceptance for 1A/1B:
+- Install dependencies and run a successful production build.
+- Check all routes, Explore filters, event date fields, mobile layout and keyboard focus.
+- Create Google Sheet and authorize only requested spreadsheet / URL-fetch access.
+- Test with one permitted official RSS/Atom feed.
+- Confirm new feed items enter Candidates as Pending review.
+- Confirm public endpoint returns only rows explicitly marked Published and Verified.
+- Connect the endpoint in Explore and verify a test listing.
+- Verify new commits appear in the imported Bolt project / GitHub two-way sync.
+
+## Phase 1 — Application foundation and public discovery shell (original specification)
 - Import the existing private GitHub repository into Bolt and verify repository/branch sync before code generation.
 - Scaffold React + TypeScript + Vite, Tailwind, routes, design tokens and reusable accessible components.
 - Build the public landing page, Explore shell, event detail template, informational/legal placeholders and 404.
 - Use only a small illustrative dataset, visibly labelled as demo data; no fake live metrics or verified events.
 - Keep existing Markdown documentation intact.
 - Do not provision external services or implement OAuth/event ingestion in this phase.
+
+Status: implementation source has been added as Phase 1A; validation remains outstanding. The owner-prioritized 1B Google intake source is documented above.
 
 Acceptance: the app builds; public routes and navigation work; mobile/desktop layouts and basic accessibility are checked; demo data is labelled; the existing repo is synced and the resulting commit is visible on GitHub.
 
@@ -37,22 +80,23 @@ Acceptance: access policies are enabled and tested on all private/client-exposed
 Acceptance: filters compose correctly; unknown facts remain unknown; CTA uses verified organizer destination; no fake metrics.
 
 ## Phase 4 — Authentication and dashboard
-- Email/Google auth where supported; profile onboarding and privacy.
+- Email/Google authentication where supported without paid requirements; profile onboarding and privacy.
 - Saved events, comparisons, notifications, submissions.
 
 Acceptance: members cannot read or mutate another member's private data.
 
 ## Phase 5 — Teammates and collaboration
 - Teammate posts, explainable complementary skill suggestions, invitations, join requests.
-- Teams, projects, tasks, milestones, comments, submission checklist.
+- Teams, projects, tasks, milestones, comments, and submission checklist.
 
 Acceptance: team resources isolated by membership; matching explanations are honest.
 
-## Phase 6 — Event ingestion and moderation
-- Official feeds/APIs, permitted public URLs, organizer submissions, optional Gmail/Apps Script workflow.
-- Extraction, validation, deduplication, provenance, review, refresh, expiry, change tracking.
+## Phase 6 — Expanded event ingestion and moderation
+- Extend the bounded RSS/Atom prototype with organizer submissions and separately reviewed permitted public sources/APIs.
+- Optional Gmail Alerts workflow only after explicit owner approval for dedicated-label access and minimum OAuth scopes.
+- Extraction, validation, deduplication, provenance, review, refresh, expiry, and change tracking.
 
-Acceptance: published events have traceable source evidence; unknown facts remain null; untrusted sources require review; provider policies and quotas respected.
+Acceptance: published events have traceable source evidence; unknown facts remain null; untrusted sources require human review; provider policies and quotas are respected.
 
 ## Phase 7 — Quality, deployment, operations
 - Functional, security, RLS, accessibility, mobile, and performance checks.
