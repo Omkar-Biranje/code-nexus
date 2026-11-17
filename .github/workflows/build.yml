@@ -26,5 +26,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Syntax-check Google Apps Script source
         run: node --check < automation/google-apps-script/Code.gs
+      - name: Test discovery normalization and safety helpers
+        run: node --test automation/google-apps-script/tests/discovery.test.cjs
       - name: Run production build and TypeScript checks
         run: npm run build
