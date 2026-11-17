@@ -15,7 +15,7 @@ Acceptance: private repository and documentation verified; no paid dependency re
 
 The owner requested a presentable public UI/UX and a Google-based event-intake demonstration before member accounts, teammate matching or project collaboration.
 
-### Phase 1A — Public UI/UX source prototype
+### Phase 1A — Public discovery foundation (first product slice)
 Committed source files:
 - package.json, index.html, vite.config.ts, tsconfig.json
 - src/main.tsx, src/App.tsx, src/index.css
@@ -24,39 +24,41 @@ Committed source files:
 Included in source:
 - React + TypeScript + Vite application foundation, Tailwind CSS plugin, React Router and lucide-react.
 - Premium, light-first responsive landing page and navigation.
-- Explore page with search, format and experience filters.
-- Clearly labelled illustrative event cards and sample detail pages.
+- Explore search, format, experience, location, entry-fee and near-deadline filters, plus sorting.
+- Source-health snapshot, platform/context facts, conflict warnings and organizer suggestion link when a live feed is connected.
+- Clearly labelled illustrative event records until the owner connects the real feed.
 - How it works, About, Contact, Privacy, Terms, Accessibility and 404 routes.
-- A public Google-feed URL input on Explore.
 
-Current status: frontend source committed. GitHub Actions production build and TypeScript checks passed for commit 2e23405e9b4214951234fc9a652db876736e3bf0. Subsequent provenance UI changes are queued for the next CI run. Browser preview, visual QA and hosted deployment remain outstanding.
+Current status: public discovery foundation is committed. GitHub Actions verifies the TypeScript/Vite production build. Browser preview, visual QA and hosting are intentionally deferred; publication is not part of this milestone.
 
-### Phase 1B — Google Sheets / Apps Script intake prototype
+### Phase 1B — Automatic discovery + organizer intake
 Committed source files:
 - automation/google-apps-script/Code.gs
 - automation/google-apps-script/README.md
 - docs/GOOGLE_APPS_SCRIPT_SETUP.md
 
-Automated flow:
-Hackalendar JSON API + Brabble hackathons RSS → Apps Script daily fetch → SourceRecords → normalized/deduplicated AutoEvents → cross-source matching → read-only JSONP endpoint → Explore page.
+Automated feed flow:
+Hackalendar JSON API + Brabble hackathons RSS → daily Apps Script fetch → SourceRecords → normalization/deduplication/cross-match → AutoEvents + EventHistory → read-only JSONP endpoint → Explore.
+
+Separate organizer flow:
+Google Form → OrganizerIntake (REVIEW_REQUIRED) → moderator checks original organizer page → future approved publishing flow. Submitted URLs are stored only; they are not fetched or automatically published.
 
 Source policy:
-- Hackalendar public no-key API is enabled with attribution and original organiser links.
-- Brabble hackathons RSS is enabled with daily refresh and attribution; it aggregates selected feeds from multiple platforms including Unstop and Devpost. Reuse must not be presented as CODE NEXUS's own full catalogue.
-- Devpost direct scraping is disabled because published terms prohibit automated crawling.
-- Hack2Skill and Reskilll direct sources remain disabled pending a documented feed/API or permission.
-- Unstop direct crawling remains disabled; use attributed Brabble index entries for now.
+- Hackalendar public no-key API is enabled with attribution and organizer links.
+- Brabble hackathons RSS is enabled with daily refresh and attribution; its feed may contain selected listings from Unstop and Devpost. CODE NEXUS must not present Brabble's full index as its own.
+- Devpost direct scraping is disabled because its terms prohibit automated crawling without permission.
+- Hack2Skill and Reskilll direct sources remain disabled pending an approved public feed/API or written permission.
+- Unstop direct crawling remains disabled; use attributed Brabble feed entries for now.
 
-Current status: crawler source and one-time setup guide committed. It seeds permitted source URLs, automatically publishes attributed records to AutoEvents, deduplicates, cross-matches and installs a daily trigger. No Google Sheet has been created, Apps Script authorized, trigger installed or /exec endpoint deployed yet. No per-event review is required after owner-side one-time setup.
+Current status: code creates six spreadsheet tabs, an organizer suggestion form, daily and form-submit triggers, source status, material event history, attribution, conflict labels and expiry/cancellation filtering. No Google Sheet has been created, Apps Script authorized, triggers installed or /exec endpoint deployed yet. Feed-sourced events need no per-event approval; community suggestions do.
 
 Acceptance for 1A/1B:
-- GitHub Actions passes TypeScript/Vite production build and Apps Script syntax check.
-- Check routes, Explore filters, event date fields, mobile layout and keyboard focus.
-- Owner creates the Google Sheet, authorizes Sheets + URL Fetch, and runs setupCodeNexus once.
-- Verify first-pass fetch results and daily trigger in Apps Script execution history.
+- GitHub Actions passes Apps Script syntax check and TypeScript/Vite production build.
+- Owner creates the Google Sheet and authorizes Sheets, Forms and URL Fetch.
+- Verify the first fetch, six tabs, organizer form, both triggers and RunLog entries.
 - Deploy the read-only endpoint and connect it once in Explore.
-- Confirm single-index and cross-index labels, source attribution and original links appear.
-- Verify new commits appear in the imported Bolt project / GitHub two-way sync.
+- Confirm source labels, source conflicts, attribution, organizer links and expired/cancelled exclusion.
+- Check responsive layout and keyboard focus in browser preview before publication.
 
 ## Phase 1 — Application foundation and public discovery shell (original specification)
 - Import the existing private GitHub repository into Bolt and verify repository/branch sync before code generation.
