@@ -204,9 +204,12 @@ function ensureOrganizerIntakeForm_(ss) {
       .setTitle("Additional context")
       .setHelpText("Optional: event dates, eligibility, or a note about the opportunity.")
       .setRequired(false);
-    form.setDestination(FormApp.DestinationType.SPREADSHEET, ss.getId());
-    form.setAcceptingResponses(true);
   }
+
+  // Reapply the response destination on every setup run so a restored form
+  // still points at the active workbook. This does not create duplicate forms.
+  form.setDestination(FormApp.DestinationType.SPREADSHEET, ss.getId());
+  form.setAcceptingResponses(true);
 
   const hasTrigger = ScriptApp.getProjectTriggers().some(function (trigger) {
     return trigger.getHandlerFunction() === "onOrganizerIntakeSubmit";
@@ -266,14 +269,27 @@ function ensureSheets_(ss) {
     if (!sheet) sheet = ss.insertSheet(name);
     const headers = CN.HEADERS[name];
 
+    if (sheet.getMaxColumns() < headers.length) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), headers.length - sheet.getMaxColumns());
+    }
+
     if (sheet.getLastRow() === 0) {
       sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     } else {
-      const existing = sheet.getRange(1, 1, 1, headers.length).getDisplayValues()[0];
-      if (existing.join("|") !== headers.join("|")) {
+      const existingLength = Math.max(sheet.getLastColumn(), 1);
+      const existing = sheet.getRange(1, 1, 1, existingLength).getDisplayValues()[0];
+      const sharedLength = Math.min(existing.length, headers.length);
+      const matchesExisting = headers.slice(0, sharedLength).every(function (header, index) {
+        return existing[index] === header;
+      });
+      if (!matchesExisting || existing.length > headers.length) {
         throw new Error(
-          "Header mismatch in " + name + ". Use a fresh CODE NEXUS workbook or migrate the sheet manually; existing data was not overwritten."
+          "Header mismatch in " + name + ". Existing columns were not overwritten; use a fresh CODE NEXUS workbook or migrate this sheet manually."
         );
+      }
+      if (existing.length < headers.length) {
+        sheet.getRange(1, existing.length + 1, 1, headers.length - existing.length)
+          .setValues([headers.slice(existing.length)]);
       }
     }
 
@@ -923,6 +939,9 @@ function rebuildAutoEvents_(recordsSheet, eventsSheet, now) {
       discoveryStatus: status,
       discoveredAt: oldDiscovered[key] || now.toISOString(),
       lastCheckedAt: now.toISOString(),
+      platforms: event.platforms || [],
+      eligibility: event.eligibility || "",
+      cancelled: !!event.cancelled,
     };
   });
 
@@ -941,7 +960,7 @@ function rebuildAutoEvents_(recordsSheet, eventsSheet, now) {
       event.prizeCurrency, event.officialUrl, event.sourceUrl, event.sourceNames,
       event.sourceCount, event.conflictingFields, event.attribution,
       event.discoveryStatus, event.discoveredAt, event.lastCheckedAt,
-      event.platforms || [], event.eligibility || "", !!event.cancelled,
+      (event.platforms || []).join(", "), event.eligibility || "", !!event.cancelled,
     ];
   });
 
