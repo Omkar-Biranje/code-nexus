@@ -6,6 +6,8 @@ export type Hackathon = {
   summary: string;
   mode: string;
   location: string;
+  country?: string | null;
+  city?: string | null;
   level: string;
   skills: string[];
   registrationDeadline: string | null;
@@ -15,6 +17,10 @@ export type Hackathon = {
   timezone: string | null;
   teamSize: string | null;
   prize: string | null;
+  entryFee?: string | null;
+  eligibility?: string | null;
+  sourcePlatforms?: string | null;
+  lastCheckedAt?: string | null;
   sourceUrl: string | null;
   officialUrl: string | null;
   verificationStatus: string;
