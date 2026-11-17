@@ -771,7 +771,7 @@ function canonicalUrl_(value) {
       return !/^utm_/.test(name) &&
         ["fbclid", "gclid", "mc_cid", "mc_eid", "ref", "referrer"].indexOf(name) === -1;
     }).join("&");
-    url = urlParts[0] + (query ? "?" + query : "");
+    url = urlParts[0].replace(/\/$/, "") + (query ? "?" + query : "");
   }
   url = url.replace(/^https:\/\/([^/]+)/i, function (_, host) { return "https://" + host.toLowerCase(); });
   return url.replace(/\/$/, "");
