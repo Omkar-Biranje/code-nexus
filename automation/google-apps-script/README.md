@@ -1,68 +1,83 @@
 # CODE NEXUS — automatic hackathon discovery
 
-This free-first Google Apps Script crawler performs daily discovery from configured public indexes. After the one-time Google Sheet authorization and web-app deployment, there is **no manual per-event entry or approval workflow**.
+This free-first Apps Script pipeline discovers listings from permitted public feeds/APIs. After the owner's one-time setup, feed-sourced events are fetched, normalized, deduplicated and refreshed automatically. No per-event manual entry or approval is needed for these configured feeds.
 
-## Enabled automatic sources
+A separate organizer/community suggestion form accepts event URLs. Those suggestions enter a review queue and are not automatically fetched or published.
 
-1. **Hackalendar JSON API** — public structured event data, no API key. Its API page describes the index as verified; CODE NEXUS still preserves the original organiser URL and does not claim that our app independently rechecked organizer facts.
-   - API: https://hackalendar.com/api/events
-   - API details: https://hackalendar.com/api
-2. **Brabble hackathons RSS** — daily-refreshed feed that aggregates listings from several platforms including Unstop, Devpost, Devfolio, MLH, DoraHacks, HackerEarth, Hack Club and others.
+## Enabled sources
+
+1. **Hackalendar JSON API** — public structured event index; no API key.
+   - Endpoint: https://hackalendar.com/api/events
+   - Docs: https://hackalendar.com/api
+2. **Brabble hackathons RSS** — public bot/newsletter feed, daily refresh.
    - Feed: https://brabble.ai/rss/hackathons.xml
    - Developer / fair-use terms: https://brabble.ai/developers
 
-Brabble's published fair-use terms allow reuse with attribution, require links back to organisers, recommend daily caching, and prohibit presenting its full index as our own. CODE NEXUS refreshes it daily and labels Brabble as a source.
+Brabble's current JSON listing API requires a key. CODE NEXUS uses the public RSS route instead. Brabble reuse requires attribution, original organizer links and daily caching; do not present its full index as CODE NEXUS's own catalogue.
 
-## Platform coverage and restrictions
+## Platform coverage policy
 
-- **Unstop and Devpost:** some listings are available indirectly through Brabble's source-attributed feed. We do not directly crawl these sites from CODE NEXUS.
-- **Devpost direct crawler:** disabled because Devpost's published Terms of Service prohibit automated scraping/crawling.
-- **Hack2Skill:** shown as a known platform, but no documented public feed/API or general automated-access permission was established during this review. Direct source remains disabled. We will add it after Hack2Skill supplies a public feed/API or written permission.
-- **Reskilll:** no documented public feed/API or automated-access permission was established during this review. Direct source remains disabled.
-- The Sources tab includes these inactive platforms with the reason. Do not change them to Enabled without documenting an approved data-access route.
+- **Unstop and Devpost:** some listings may arrive through Brabble's attributed feed. They are not direct CODE NEXUS integrations.
+- **Devpost direct crawler:** disabled because its published terms prohibit automated scraping/crawling without permission.
+- **Hack2Skill and Reskilll:** direct ingestion remains disabled until a documented public feed/API or written permission is confirmed.
+- The Sources sheet documents inactive platforms and the reason. Do not activate direct crawlers without a permitted access route.
 
-## What happens automatically
+## What setup creates
 
-1. The first setup creates four tabs: Sources, SourceRecords, AutoEvents, and RunLog.
-2. The Sources tab is seeded with Hackalendar and Brabble enabled. Restricted / unconfirmed direct crawlers are listed as disabled.
-3. Apps Script fetches the two enabled sources, parses their records, normalizes fields, and deduplicates records by official URL or title/organizer.
-4. When both indexes contain the same event, the record is labelled **Cross-source corroborated** and keeps both source names.
-5. Every discovered record is automatically written to AutoEvents and exposed by the read-only web app if its known registration deadline has not passed.
-6. A daily trigger runs at approximately 04:00 Asia/Kolkata and refreshes the indexes. Brabble is not polled hourly because its published fair-use guidance says daily data refresh is sufficient.
+Six Google Sheet tabs:
 
-There is no manual event review queue in this automatic mode. Instead, event cards state whether the listing is auto-discovered or appears in multiple indexes. A cross-index match is **not** a guarantee that every organizer fact has been independently verified. The original organizer registration page remains the final source of truth.
+- `Sources` — configured sources, enablement, last-check time and fetch result.
+- `SourceRecords` — latest fetched record from each enabled source.
+- `AutoEvents` — normalized, de-duplicated event index exposed to Explore.
+- `EventHistory` — new listings and material changes to tracked event facts.
+- `OrganizerIntake` — community/organizer suggestions waiting for review.
+- `RunLog` — setup, source fetch, trigger and intake activity.
 
-## One-time setup in your browser
+Setup also creates one Google Form named **CODE NEXUS — Submit a hackathon**. It asks for the official event URL, organizer/host and optional context. It is not event registration. Valid HTTPS submissions enter `OrganizerIntake` with status `REVIEW_REQUIRED`; submitted URLs are not automatically fetched.
+
+## Automatic feed pipeline
+
+1. Fetch Hackalendar JSON and Brabble RSS using exact HTTPS endpoint allowlists; redirects are blocked.
+2. Normalize title, organizer, dates, mode, location, skills, team size, fees, prizes, eligibility, official/source URLs and platform provenance.
+3. Deduplicate using canonical event URL or title + organizer.
+4. Cross-match records from different indexes, retain source names and flag disagreements.
+5. Write the current event index to `AutoEvents`, preserve discovery time, and append material changes to `EventHistory`.
+6. Expose non-cancelled, not-known-expired opportunities through the read-only JSON/JSONP endpoint.
+7. Refresh daily at approximately 04:00 Asia/Kolkata.
+
+The fetch is bounded to five Hackalendar pages of up to 200 rows each and a 2 MB Brabble RSS response. A failed source fetch does not erase that source's previous records.
+
+## Trust and data quality
+
+- **Auto-discovered:** observed in one configured index.
+- **Cross-source corroborated:** matching record observed in more than one index.
+- **Source conflict:** tracked facts differ between source records.
+- These are discovery/provenance labels, not independent organizer verification. The original organizer page remains the source of truth.
+- Unknown dates, timezones, eligibility, fees, prizes and team sizes remain unknown.
+- Registration deadline, submission deadline, event start and event end are separate.
+- Cancelled events and known-expired opportunities are excluded from the public feed. When registration deadline is missing, event start is used as the expiry boundary if provided.
+
+## One-time browser setup
 
 1. Create a Google Sheet named **CODE NEXUS — Event Intake**.
-2. In that sheet, open **Extensions → Apps Script**.
-3. Replace the starter Code.gs with the Code.gs file in this folder and save.
-4. Select setupCodeNexus and click **Run** once. Review Google's permission screen and authorize spreadsheet access and external URL fetching.
-5. The script creates and seeds the tabs, installs the daily trigger, and runs the initial discovery pass. No source URLs need to be added manually.
-6. In Apps Script choose **Deploy → New deployment → Web app**.
-7. Choose **Execute as: Me**. Choose the least-public access that lets your website visitors read the public index. If anonymous access is unavailable, do not weaken account security; keep the site in demo mode.
-8. Deploy and copy the web app URL ending in /exec.
-9. Open CODE NEXUS → Explore → **Connect discovery feed**, paste the /exec URL once, and connect. The browser remembers it and reconnects on later visits.
+2. Open **Extensions → Apps Script**.
+3. Replace starter `Code.gs` with this repository's `automation/google-apps-script/Code.gs`; save.
+4. Select `setupCodeNexus` and click **Run** once.
+5. Authorize Google Sheets, Google Forms and external URL Fetch using Google's consent screen.
+6. The script creates the tabs and organizer form, installs daily and form-submit triggers, and performs the first fetch.
+7. The setup alert displays the organizer form URL. The read-only feed also exposes this URL after deployment.
+8. Deploy → New deployment → Web app. Choose **Execute as: Me** and the least-public access setting that allows website visitors to read public listings.
+9. Copy the URL ending in `/exec`; in CODE NEXUS → Explore → **Connect discovery feed**, paste it once.
 
-The Google Sheet and Apps Script must be created under an account controlled by the project owner. Do not paste passwords, OAuth tokens or API keys into ChatGPT or the repository. This integration does not request Gmail access and does not read inbox messages.
+If an earlier workbook exists, setup appends missing columns and creates new tabs without clearing existing event rows. Unexpected header mismatches stop the script instead of overwriting data.
 
-## Data quality and publication semantics
+The owner must authorize Apps Script, verify the first fetch, deploy the endpoint and connect the URL. No Google Sheet, form, trigger or live feed is created by a GitHub commit alone. No Gmail access is used. Never put passwords, OTPs or secrets in chat or source control.
 
-- **Auto-discovered:** one configured index supplied this record.
-- **Cross-source corroborated:** two configured indexes supplied a matching record.
-- A single Hackalendar source result is labelled as present in Hackalendar's reviewed index; it is not a claim that CODE NEXUS independently checked the organizer's latest rules.
-- Brabble records carry attribution and are not represented as an original CODE NEXUS data collection.
-- Unknown dates, timezones, eligibility, fees, prizes and team sizes stay blank / Not specified.
-- Registration deadline, submission deadline, event start and event end are separate.
-- A known registration deadline in the past is excluded by the public read endpoint. A missing deadline is not guessed.
-- A successful fetch means only that a source was reachable. It does not guarantee that every event is current, open, complete or eligible for every student.
+## Safety and operating limits
 
-## Safety, quota and operating limits
-
-- Only HTTPS public source endpoints are fetched.
-- Devpost, Hack2Skill, Unstop and Reskilll direct-crawler rows are disabled by default.
-- The script uses a lock, bounded pagination (maximum five pages of 200 Hackalendar records), a 2 MB RSS response cap and a once-daily schedule.
-- Google Apps Script consumer accounts currently list 20,000 URL Fetch calls/day, 90 minutes/day total trigger runtime and a six-minute maximum per execution. Quotas can change: https://developers.google.com/apps-script/guides/services/quotas
-- Public /exec output contains only public event data. Do not store student profiles, private emails or credentials in this spreadsheet.
-- This is an automated source index, not a universal web crawler. Its coverage depends on sources whose feeds or APIs are permitted and available.
-- Live Google execution, authorization, daily trigger and source responses still require owner-side setup and testing.
+- Only two exact approved feed endpoints are fetched. Organizer-submitted links are stored for review and are not fetched.
+- The script uses a lock, bounded pagination, response-size caps and daily caching.
+- No logged-in page scraping, CAPTCHA bypass, paywall bypass or undocumented private API use.
+- Google Apps Script quotas vary and can change: https://developers.google.com/apps-script/guides/services/quotas
+- The public feed contains public event details only; do not store student profiles, private emails or credentials in this workbook.
+- This is a permitted-source aggregator, not a universal internet crawler.
