@@ -18,6 +18,9 @@ export type Hackathon = {
   sourceUrl: string | null;
   officialUrl: string | null;
   verificationStatus: string;
+  sourceNames?: string;
+  sourceCount?: number;
+  attribution?: string;
   isDemo?: boolean;
 };
 
