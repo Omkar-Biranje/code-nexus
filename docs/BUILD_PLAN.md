@@ -29,7 +29,7 @@ Included in source:
 - How it works, About, Contact, Privacy, Terms, Accessibility and 404 routes.
 - A public Google-feed URL input on Explore.
 
-Current status: source committed to main. Dependency installation, build, type-check and browser QA have NOT yet been executed.
+Current status: frontend source committed. GitHub Actions production build and TypeScript checks passed for commit 2e23405e9b4214951234fc9a652db876736e3bf0. Subsequent provenance UI changes are queued for the next CI run. Browser preview, visual QA and hosted deployment remain outstanding.
 
 ### Phase 1B — Google Sheets / Apps Script intake prototype
 Committed source files:
@@ -37,19 +37,25 @@ Committed source files:
 - automation/google-apps-script/README.md
 - docs/GOOGLE_APPS_SCRIPT_SETUP.md
 
-Intended flow:
-Official RSS/Atom feeds → Apps Script → Candidates sheet (Pending review) → human review → Published sheet (Published + Verified) → read-only JSONP endpoint → Explore page.
+Automated flow:
+Hackalendar JSON API + Brabble hackathons RSS → Apps Script daily fetch → SourceRecords → normalized/deduplicated AutoEvents → cross-source matching → read-only JSONP endpoint → Explore page.
 
-Current status: source and setup instructions committed. No Google Sheet has been created, no feed source configured, no script authorized, no timer trigger installed, and no public endpoint deployed or tested. Gmail inbox access is not part of this prototype.
+Source policy:
+- Hackalendar public no-key API is enabled with attribution and original organiser links.
+- Brabble hackathons RSS is enabled with daily refresh and attribution; it aggregates selected feeds from multiple platforms including Unstop and Devpost. Reuse must not be presented as CODE NEXUS's own full catalogue.
+- Devpost direct scraping is disabled because published terms prohibit automated crawling.
+- Hack2Skill and Reskilll direct sources remain disabled pending a documented feed/API or permission.
+- Unstop direct crawling remains disabled; use attributed Brabble index entries for now.
+
+Current status: crawler source and one-time setup guide committed. It seeds permitted source URLs, automatically publishes attributed records to AutoEvents, deduplicates, cross-matches and installs a daily trigger. No Google Sheet has been created, Apps Script authorized, trigger installed or /exec endpoint deployed yet. No per-event review is required after owner-side one-time setup.
 
 Acceptance for 1A/1B:
-- Install dependencies and run a successful production build.
-- Check all routes, Explore filters, event date fields, mobile layout and keyboard focus.
-- Create Google Sheet and authorize only requested spreadsheet / URL-fetch access.
-- Test with one permitted official RSS/Atom feed.
-- Confirm new feed items enter Candidates as Pending review.
-- Confirm public endpoint returns only rows explicitly marked Published and Verified.
-- Connect the endpoint in Explore and verify a test listing.
+- GitHub Actions passes TypeScript/Vite production build and Apps Script syntax check.
+- Check routes, Explore filters, event date fields, mobile layout and keyboard focus.
+- Owner creates the Google Sheet, authorizes Sheets + URL Fetch, and runs setupCodeNexus once.
+- Verify first-pass fetch results and daily trigger in Apps Script execution history.
+- Deploy the read-only endpoint and connect it once in Explore.
+- Confirm single-index and cross-index labels, source attribution and original links appear.
 - Verify new commits appear in the imported Bolt project / GitHub two-way sync.
 
 ## Phase 1 — Application foundation and public discovery shell (original specification)
