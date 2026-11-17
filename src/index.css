@@ -132,6 +132,7 @@ button:disabled { cursor: not-allowed; opacity: .58; }
 .event-card h3 { margin: 0; color: #21324d; font-size: 17px; line-height: 1.25; letter-spacing: -.035em; }
 .event-summary { min-height: 55px; margin: 9px 0 13px; color: #78869a; font-size: 10px; line-height: 1.65; }
 .event-provenance { margin: -5px 0 10px; color: #8491a4; font-size: 8px; line-height: 1.5; font-weight: 750; }
+.event-conflict { margin: -3px 0 10px; padding: 7px 8px; border-radius: 6px; background: #fff3ed; color: #a35435; font-size: 8px; line-height: 1.5; font-weight: 750; }
 .tag-row, .detail-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .skill-tag { display: inline-flex; align-items: center; padding: 6px 8px; border-radius: 6px; background: #f0f4fa; color: #62738e; font-size: 8px; font-weight: 700; }
 .event-card-bottom { min-height: 47px; padding: 10px 17px; border-top: 1px solid #eff2f6; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
