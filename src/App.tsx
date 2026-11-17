@@ -75,7 +75,7 @@ function EventCard({ event, live = false }: { event: Hackathon; live?: boolean }
     <article className="event-card">
       <div className="event-card-top">
         <span className={live ? "status-pill status-live" : "status-pill status-demo"}>
-          <span className="status-dot" />{live ? (event.sourceCount && event.sourceCount > 1 ? "Cross-source match" : "Auto-discovered") : "Illustrative demo"}
+          <span className="status-dot" />{live ? (event.sourceConflicts ? "Source conflict" : event.sourceCount && event.sourceCount > 1 ? "Cross-source match" : "Auto-discovered") : "Illustrative demo"}
         </span>
         <span className="event-mode">{event.mode || "Mode not specified"}</span>
       </div>
@@ -84,6 +84,7 @@ function EventCard({ event, live = false }: { event: Hackathon; live?: boolean }
         <h3>{event.title}</h3>
         <p className="event-summary">{event.summary}</p>
         {live && <p className="event-provenance">{event.sourceCount && event.sourceCount > 1 ? "Found in " + event.sourceCount + " indexes" : "Auto-discovered"}{event.sourceNames ? " · " + event.sourceNames : ""}</p>}
+        {live && event.sourceConflicts && <p className="event-conflict">Sources disagree on: {event.sourceConflicts}. Check the organizer page before relying on these details.</p>}
         <div className="tag-row">{event.skills.slice(0, 3).map((skill) => <span className="skill-tag" key={skill}>{skill}</span>)}</div>
       </div>
       <div className="event-card-bottom">
@@ -138,6 +139,7 @@ function mapPublishedEvent(item: PublishedFeedEvent, index: number): Hackathon {
     sourceNames: item.sourceNames || "",
     sourceCount: Number(item.sourceCount) || 1,
     attribution: item.attribution || "",
+    sourceConflicts: item.sourceConflicts || "",
     isDemo: false,
   };
 }
