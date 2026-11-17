@@ -4,29 +4,32 @@
 
 Global hackathon discovery and collaboration for students and builders.
 
-## Current milestone
+## First working slice
 
-- Public landing and Explore UI source prototype.
-- Search and format/experience filters using clearly labelled illustrative demo events.
-- Event detail template with separate registration and submission dates.
-- Google Sheets + Apps Script RSS/Atom intake starter with a human review gate.
+- Responsive, light-first landing page and public routes.
+- Explore search and filters with clearly labelled demo content until the live feed is connected.
+- Event detail template with registration and submission dates kept separate.
+- Automatic discovery source code using Hackalendar JSON + Brabble hackathons RSS.
+- Daily Apps Script refresh, source attribution, deduplication and cross-source match labels.
 - No authentication, member database, teammate matching or collaboration backend yet.
 
 ## Run the frontend
 
-Requires a current Node.js installation.
+Requires Node.js 22 or later.
 
 1. Install dependencies: npm install
-2. Start the development server: npm run dev
-3. Create a production build: npm run build
+2. Start development: npm run dev
+3. Production build: npm run build
 
-The first build has not yet been run in the imported Bolt workspace. npm install will regenerate the placeholder package-lock.json from package.json.
+GitHub Actions runs the TypeScript/Vite production build and an Apps Script JavaScript syntax check on pushes to main.
 
-## Google event intake
+## Automatic event discovery
 
 See automation/google-apps-script/README.md and docs/GOOGLE_APPS_SCRIPT_SETUP.md.
 
-The script reads only feed URLs an editor adds to the Sources sheet. New entries are candidates requiring human review; public output is restricted to Published + Verified rows. It does not read Gmail or scrape the entire web.
+One-time owner setup is required to create the Google Sheet, authorize Apps Script, deploy its read-only web app and connect the /exec URL in Explore. After that, the script refreshes daily and no per-event manual entry/review is required.
+
+Enabled sources: Hackalendar public JSON API and Brabble hackathons RSS. Direct crawlers for Devpost, Hack2Skill, Unstop and Reskilll are not enabled as described in the source guide. Cross-source matches are not a guarantee of organizer verification. Source attribution must remain visible.
 
 ## Project documentation
 
@@ -34,8 +37,10 @@ The script reads only feed URLs an editor adds to the Sources sheet. New entries
 - docs/ARCHITECTURE.md — architecture and security.
 - docs/BUILD_PLAN.md — phased implementation plan.
 - docs/BOLT_MASTER_PROMPT.md — project instructions for Bolt.
+- docs/PRESENTATION_MILESTONE.md — presentation walkthrough.
+- docs/GOOGLE_APPS_SCRIPT_SETUP.md — one-time integration setup.
 - CONTEXT.md — current decisions and verified status.
 
-## Important demo disclaimer
+## Demo disclaimer
 
-The sample hackathon records are illustrative only. They are not live event listings, verified opportunities, or a claim of complete global coverage.
+The bundled sample events are illustrative only. They are not live listings. Imported index records carry source labels and are not represented as independently verified by CODE NEXUS.
