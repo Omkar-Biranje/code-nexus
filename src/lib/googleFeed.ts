@@ -15,6 +15,10 @@ export type PublishedFeedEvent = {
   teamSize?: string;
   entryFee?: string;
   currency?: string;
+  platform?: string;
+  eligibility?: string;
+  sourcePlatforms?: string;
+  cancelled?: boolean;
   prizeAmount?: string;
   prizeCurrency?: string;
   officialUrl?: string;
@@ -31,7 +35,8 @@ export type GoogleFeedResponse = {
   ok: boolean;
   generatedAt?: string;
   events: PublishedFeedEvent[];
-  sources?: Array<{ name: string; enabled: boolean; status: string; lastCheckedAt?: string }>;
+  sources?: Array<{ name: string; enabled: boolean; status: string; lastCheckedAt?: string; refreshHours?: number }>;
+  organizerSubmissionUrl?: string;
   disclaimer?: string;
   message?: string;
 };
