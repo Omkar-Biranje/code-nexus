@@ -13,18 +13,17 @@ Last updated: 2026-11-17
 - Build preference: browser-based AI builder; avoid local terminal, VS Code, Node/npm setup, and manual coding where possible
 - Build approach: complete specification and acceptance criteria before consuming scarce builder credits
 
-## Selected initial stack (verified 2026-11-17; not yet connected)
-- AI builder: Bolt.new Free (1,000,000 tokens/month; 300,000/day at time of verification)
-- Backend: Bolt Cloud built-in database, authentication, storage, and server functions
-- Hosting: Bolt Free with a public .bolt.host URL; Bolt branding and a 333,000 monthly web-request limit apply
-- Source control: GitHub two-way sync; import the existing private repository Omkar-Biranje/code-nexus
-- Frontend: React + TypeScript + Vite; Tailwind CSS; React Router; lucide-react
-- Supabase is not selected for the initial build: Bolt's native Supabase integration is currently listed as Pro/Teams-only. Reassess a portable migration only if a separately verified free connection path is needed.
-- Google Apps Script with permitted public feeds and optionally a dedicated Gmail label for bounded ingestion, in a later phase
-- Optional free-tier model for extraction; deterministic validation and human review remain authoritative
-- No OpenAI API dependency required for the initial build
+## Selected initial stack
+- AI builder: Bolt.new Free. The current free plan lists 300,000 tokens/day and 1,000,000/month; the owner's daily quota is currently exhausted. Do not purchase tokens or create accounts merely to bypass provider limits.
+- Backend: Bolt Cloud built-in database, authentication, storage, and server functions — deferred until the public shell is tested.
+- Hosting: Bolt Free with a public .bolt.host URL; Bolt branding and a 333,000 monthly web-request limit apply.
+- Source control: existing private GitHub repository Omkar-Biranje/code-nexus; GitHub is the durable source of truth.
+- Frontend: React + TypeScript + Vite; Tailwind CSS; React Router; lucide-react.
+- Google intake prototype: Google Sheets + bound Apps Script, configured official RSS/Atom feeds, candidate review, and a read-only public feed. It does not read Gmail and does not auto-publish.
+- Supabase is not selected for the initial build: Bolt's native Supabase integration is listed as Pro/Teams-only in the provider decision checked 2026-11-17.
+- No OpenAI API dependency required for the initial build.
 - Decision details and dated official sources: docs/AI_BUILDER_DECISION.md
-- Ready-to-use build prompt and acceptance checklist: docs/BOLT_MASTER_PROMPT.md
+- Product and architecture requirements: docs/PRODUCT_SPEC.md and docs/ARCHITECTURE.md
 
 ## Non-negotiable constraints
 - Never claim an integration, build, test, or deployment succeeded until verified.
@@ -36,24 +35,27 @@ Last updated: 2026-11-17
 - Separate registration deadline, submission deadline, event start, and event end.
 - Preserve event-local IANA timezone; do not assume India time.
 - Do not fabricate analytics, counts, ratings, match scores, or verification claims.
-- Enable RLS on every client-exposed private/user-owned table.
+- Enable RLS on every client-exposed private/user-owned table when a backend is introduced.
 - Document export/backup because free database plans may not include automated backups.
 - Recheck official free-plan quotas and terms before provider commitment or publishing.
 - Bolt Free currently limits hosting to 333,000 web requests per month; free sites may stop serving content when this cap is reached. No unlimited uptime or traffic claim is permitted.
 - Custom domains and Bolt's native Supabase integration are paid features; do not activate them under the free-only decision.
+- Google feed candidates are not public events until a human checks the organizer source and explicitly marks the Published row as Published and Verified.
+
+## Current implementation status — 2026-11-17
+- [x] Private GitHub repository, permissions, and main branch verified.
+- [x] Product, architecture, build, AI-builder and master-prompt documentation added and preserved.
+- [x] Public application source scaffold committed to main in commit d6637a40939263dc75b5ba6bc8619c2153619400.
+- [x] Landing page, responsive navigation, Explore filters, illustrative event cards/details, informational routes, and Google feed connection control added in source.
+- [x] Google Apps Script feed-intake source and setup guide committed to main in commit 9e888603d98cbdc4f47db352261c6a34900a8bfd.
+- [ ] Vite dependency install, production build, TypeScript checks, and browser QA.
+- [ ] Confirm Bolt imported workspace has pulled the new GitHub commits and two-way sync is working.
+- [ ] Create and authorize the Google Sheet, add permitted feed URLs, run a live test, and deploy the read-only endpoint.
+- [ ] Connect the deployed endpoint in Explore and verify only approved Published + Verified rows are returned.
+- [ ] Backend/auth, member profiles, teammate matching, collaboration and full admin tools.
 
 ## Workflow
-At each phase: state scope, make changes, report files, report tests actually run, give browser-only test steps, update this file, and stop for approval before the next major phase or any account/security-sensitive action.
+At each phase: state scope, make changes, report files, report tests actually run, give browser-only test steps, update this file and docs/BUILD_PLAN.md, and stop for approval before the next major phase or any account/security-sensitive action.
 
-## Status
-- [x] Private GitHub repository verified.
-- [x] README initialized and verified.
-- [x] Add complete product and architecture documentation.
-- [x] Confirm AI builder free-plan limits and GitHub sync.
-- [x] Finalize implementation prompt and acceptance criteria.
-- [ ] Import this private repository into Bolt and verify two-way GitHub sync.
-- [ ] Build the first public application shell in Bolt.
-- [ ] Provision Bolt Cloud database/auth and apply schema/security policies after owner authorization.
-- [ ] Implement bounded event ingestion and moderation.
-- [ ] Test security, accessibility, mobile, and core workflows.
-- [ ] Deploy and document operating limits.
+## Presentation milestone boundary
+The currently committed work is a source-code prototype. It has not yet been built, browser-tested, hosted, or connected to a live Google Sheet. The Explore page uses clearly labelled illustrative demo records until an owner-configured public Apps Script endpoint is connected. Do not describe the intake automation as live until the owner has authorized, configured, deployed and tested it.
