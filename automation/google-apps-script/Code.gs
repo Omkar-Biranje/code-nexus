@@ -286,8 +286,8 @@ function runDailyDiscovery() {
 }
 
 function fetchSource_(sourceName, sourceType, endpoint) {
-  if (!isSafeHttpsUrl_(endpoint)) {
-    throw new Error("Source endpoint must be a public HTTPS URL.");
+  if (!isSafeHttpsUrl_(endpoint) || !isAllowedSourceEndpoint_(endpoint, sourceType)) {
+    throw new Error("Source endpoint is not on the approved HTTPS source allowlist.");
   }
 
   if (sourceType === "HACKALENDAR_JSON") {
@@ -316,11 +316,14 @@ function fetchHackalendar_(sourceName, endpoint) {
     const response = UrlFetchApp.fetch(url, {
       method: "get",
       muteHttpExceptions: true,
-      followRedirects: true,
+      followRedirects: false,
       headers: { Accept: "application/json" },
     });
 
     const code = response.getResponseCode();
+    if (code >= 300 && code < 400) {
+      throw new Error("Hackalendar redirected; the crawler blocks redirects. Update the source to its final approved URL.");
+    }
     if (code < 200 || code >= 300) {
       throw new Error("Hackalendar returned HTTP " + code + ".");
     }
@@ -360,13 +363,16 @@ function fetchRss_(sourceName, endpoint) {
   const response = UrlFetchApp.fetch(endpoint, {
     method: "get",
     muteHttpExceptions: true,
-    followRedirects: true,
+    followRedirects: false,
     headers: {
       Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml",
     },
   });
 
   const code = response.getResponseCode();
+  if (code >= 300 && code < 400) {
+    throw new Error("RSS source redirected; the crawler blocks redirects. Update the source to its final approved URL.");
+  }
   if (code < 200 || code >= 300) {
     throw new Error("RSS source returned HTTP " + code + ".");
   }
@@ -568,6 +574,33 @@ function getHost_(value) {
   return match ? match[1].toLowerCase() : "";
 }
 
+function isAllowedSourceEndpoint_(value, sourceType) {
+  const host = getHost_(value);
+  if (!host) return false;
+
+  if (sourceType === "HACKALENDAR_JSON") {
+    return host === "hackalendar.com" || host.endsWith(".hackalendar.com");
+  }
+  if (sourceType === "RSS") {
+    return host === "brabble.ai" || host.endsWith(".brabble.ai");
+  }
+  return false;
+}
+
+function comparableFieldValue_(field, value) {
+  const text = cleanText_(value, 160);
+  if (!text) return "";
+
+  const dateFields = [
+    "registrationDeadline", "submissionDeadline", "eventStart", "eventEnd",
+  ];
+  if (dateFields.indexOf(field) !== -1) {
+    const timestamp = Date.parse(text);
+    if (!isNaN(timestamp)) return String(timestamp);
+  }
+  return text.toLowerCase().replace(/\\s+/g, " ").trim();
+}
+
 function validHttpsUrl_(value) {
   const url = String(value || "").trim();
   if (!/^https:\/\/[a-z0-9.-]+(?::\d+)?(?:\/|$)/i.test(url)) return false;
@@ -686,7 +719,7 @@ function rebuildAutoEvents_(recordsSheet, eventsSheet, now) {
     fieldsToCompare.forEach(function (field) {
       const rawValue = cleanText_(item[field], 160);
       if (!rawValue) return;
-      const normalizedValue = rawValue.toLowerCase().replace(/\\s+/g, " ").trim();
+      const normalizedValue = comparableFieldValue_(field, rawValue);
       if (!event.fieldValues[field]) event.fieldValues[field] = [];
       if (event.fieldValues[field].indexOf(normalizedValue) === -1) {
         event.fieldValues[field].push(normalizedValue);
