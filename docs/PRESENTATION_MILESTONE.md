@@ -1,35 +1,43 @@
 # CODE NEXUS — Presentation milestone
 
 **Date:** 17 November 2026  
-**Milestone:** first public UI source + Google event-intake starter
+**Milestone:** public UI prototype + automatic hackathon discovery source
 
-## What is in the repository
+## What is committed
 
-1. Landing page with product positioning and a visual discovery concept.
-2. Explore page with keyword search, format and experience filters.
-3. Event cards and a detail template with separate registration, submission and event dates.
+1. Responsive landing page, public navigation and value proposition.
+2. Explore page with search, mode/experience filters and event cards.
+3. Event detail template with separate registration and submission dates.
 4. About, How it works, Contact, Privacy, Terms, Accessibility and 404 routes.
-5. Google Apps Script starter that fetches specifically configured RSS/Atom feeds into a review queue.
-6. Public event-feed loader in Explore that can connect to a deployed Apps Script web app.
+5. Google Apps Script automatic discovery from Hackalendar JSON API and Brabble hackathons RSS.
+6. Daily refresh, automatic normalization/deduplication, cross-source matching and source-attributed AutoEvents records.
+7. Explore connector that remembers the public Apps Script URL and reconnects on later visits.
+8. Source count/status/attribution shown on imported event cards.
 
-## What to demonstrate
+## How to present the crawler
 
-1. Open the CODE NEXUS landing page and explain the product promise.
-2. Select Find a hackathon / Explore.
-3. Search for a skill or theme and change the format filter.
-4. Open one sample event and point out that registration and submission dates are separate.
-5. Explain the Google automation flow: official feed → candidate queue → human verification → public listing.
-6. Show the Google Sheet tab design from the setup guide if the spreadsheet has been created.
+Show this data flow:
 
-## Accurate wording for the presentation
+Hackalendar + Brabble public indexes → daily Apps Script fetch → normalized/deduplicated records → source matching → AutoEvents → CODE NEXUS Explore.
 
-"CODE NEXUS has an initial responsive UI prototype and a Google Sheets + Apps Script ingestion workflow under development. The workflow collects items from configured public RSS/Atom feeds into a review queue. An administrator verifies each event before it can be published to the website."
+Explain that:
+- there is no per-event manual review step after the one-time Google setup;
+- single-index and cross-index records are labelled differently;
+- a cross-source match is not the same as direct organizer verification;
+- original organizer links are retained when the source provides them;
+- Hack2Skill and Reskilll direct feeds await permission or a documented feed/API;
+- Devpost direct crawling is disabled by its published terms; some Devpost listings can still arrive through Brabble's attributed feed;
+- Unstop listings are consumed indirectly via Brabble for now.
 
-Do not say the website is fully deployed, Google automation is live, all global hackathons are collected automatically, or event records are already verified unless those steps have actually been completed.
+## Accurate presentation wording
 
-## Current verification
+"CODE NEXUS has a responsive public discovery prototype and an automatic event-intake pipeline in source. Once the owner completes the one-time Google authorization and deployment, Apps Script will refresh public indexes daily, deduplicate and cross-match records, and expose source-attributed listings on Explore. Cross-source matching improves confidence, but the original organizer page remains the final authority for dates and eligibility."
 
-- GitHub source commit for frontend: d6637a40939263dc75b5ba6bc8619c2153619400.
-- GitHub source commit for Google intake: 9e888603d98cbdc4f47db352261c6a34900a8bfd.
-- Files were committed to the private repository's main branch.
-- No npm install, build, TypeScript check, browser QA, Google Sheet authorization, feed fetch, web app deployment or live-feed connection has yet been performed.
+Do not say the crawler is live, the Google Sheet is deployed, or global listings are comprehensive until the first live run is confirmed. Do not call every imported record fully verified.
+
+## Build status
+
+- GitHub Actions baseline TypeScript/Vite build passed on commit 2e23405e9b4214951234fc9a652db876736e3bf0.
+- Latest UI and automatic crawler changes are committed after that baseline and require another CI run.
+- No Google Sheet, Apps Script authorization, daily trigger, live endpoint or deployed site has yet been created by the owner.
+- Browser preview and visual QA remain outstanding.
