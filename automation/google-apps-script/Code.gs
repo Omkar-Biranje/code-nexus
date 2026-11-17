@@ -37,7 +37,7 @@ const CN = {
       "Country", "City", "Registration deadline", "Submission deadline",
       "Event start", "Event end", "Event timezone", "Skills", "Team size",
       "Entry fee", "Currency", "Prize amount", "Prize currency", "Official URL",
-      "Source URL", "Source names", "Source count", "Attribution",
+      "Source URL", "Source names", "Source count", "Conflicting fields", "Attribution",
       "Discovery / verification status", "Discovered at", "Last checked at",
     ],
     RunLog: [
@@ -672,10 +672,32 @@ function rebuildAutoEvents_(recordsSheet, eventsSheet, now) {
         eventKey: key,
         sourceNames: [],
         sourceUrls: [],
+        fieldValues: {},
+        conflictFields: [],
       });
     }
 
     const event = merged[key];
+    const fieldsToCompare = [
+      "organizer", "registrationDeadline", "submissionDeadline",
+      "eventStart", "eventEnd", "timezone", "mode", "country", "city",
+      "teamSize", "fee", "currency", "prizeAmount", "prizeCurrency",
+    ];
+    fieldsToCompare.forEach(function (field) {
+      const rawValue = cleanText_(item[field], 160);
+      if (!rawValue) return;
+      const normalizedValue = rawValue.toLowerCase().replace(/\\s+/g, " ").trim();
+      if (!event.fieldValues[field]) event.fieldValues[field] = [];
+      if (event.fieldValues[field].indexOf(normalizedValue) === -1) {
+        event.fieldValues[field].push(normalizedValue);
+      }
+      if (
+        event.fieldValues[field].length > 1 &&
+        event.conflictFields.indexOf(field) === -1
+      ) {
+        event.conflictFields.push(field);
+      }
+    });
     if (values[i][0] && event.sourceNames.indexOf(values[i][0]) === -1) {
       event.sourceNames.push(values[i][0]);
     }
@@ -699,7 +721,9 @@ function rebuildAutoEvents_(recordsSheet, eventsSheet, now) {
     const hasBrabble = sourceNames.indexOf("Brabble") !== -1;
 
     let status;
-    if (sourceCount > 1) {
+    if (sourceCount > 1 && event.conflictFields.length) {
+      status = "Cross-source match — conflicts: " + event.conflictFields.join(", ");
+    } else if (sourceCount > 1) {
       status = "Cross-source corroborated — organizer facts not independently rechecked";
     } else if (hasHackalendar) {
       status = "Listed in Hackalendar's reviewed index — check organiser for final details";
@@ -738,6 +762,7 @@ function rebuildAutoEvents_(recordsSheet, eventsSheet, now) {
       sourceUrl: canonicalUrl_(event.sourceUrl) || (event.sourceUrls[0] || ""),
       sourceNames: sourceNames.join(", "),
       sourceCount: sourceCount,
+      conflictingFields: event.conflictFields.join(", "),
       attribution: attributionParts.join(" "),
       discoveryStatus: status,
       discoveredAt: oldDiscovered[key] || now.toISOString(),
@@ -758,8 +783,8 @@ function rebuildAutoEvents_(recordsSheet, eventsSheet, now) {
       event.submissionDeadline, event.eventStart, event.eventEnd, event.timezone,
       event.skills, event.teamSize, event.fee, event.currency, event.prizeAmount,
       event.prizeCurrency, event.officialUrl, event.sourceUrl, event.sourceNames,
-      event.sourceCount, event.attribution, event.discoveryStatus, event.discoveredAt,
-      event.lastCheckedAt,
+      event.sourceCount, event.conflictingFields, event.attribution,
+      event.discoveryStatus, event.discoveredAt, event.lastCheckedAt,
     ];
   });
 
@@ -820,6 +845,7 @@ function getPublicEvents_() {
       sourceUrl: read(row, "Source URL"),
       sourceNames: read(row, "Source names"),
       sourceCount: Number(read(row, "Source count")) || 1,
+      sourceConflicts: read(row, "Conflicting fields"),
       attribution: read(row, "Attribution"),
       verificationStatus: read(row, "Discovery / verification status"),
       lastCheckedAt: read(row, "Last checked at"),
