@@ -102,7 +102,21 @@ function EventCard({ event, live = false }: { event: Hackathon; live?: boolean }
   );
 }
 
+function normalizeMode(value: string) {
+  const mode = value.trim().toLowerCase();
+  if (mode === "online") return "Online";
+  if (mode === "hybrid") return "Hybrid";
+  if (mode === "offline" || mode === "in person" || mode === "in-person") return "In person";
+  return value;
+}
+
 function formatDate(value: string, timezone: string | null) {
+  const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    const monthName = new Intl.DateTimeFormat(undefined, { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(Number(year), Number(month) - 1, 15)));
+    return Number(day) + " " + monthName + " " + year;
+  }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Not specified";
   try {
@@ -122,9 +136,11 @@ function mapPublishedEvent(item: PublishedFeedEvent, index: number): Hackathon {
     title: item.title || "Untitled event",
     organizer: item.organizer || "Organizer not specified",
     summary: item.summary || "Summary not supplied by the organizer.",
-    mode: item.mode || "Not specified",
+    mode: normalizeMode(item.mode || "Not specified"),
     location: [item.city, item.country].filter(Boolean).join(", ") || "Not specified",
-    level: "Not specified",
+    country: item.country || null,
+    city: item.city || null,
+    level: (item.eligibility || "").toLowerCase().includes("beginner") ? "Beginner friendly" : "Not specified",
     skills: (item.skills || "").split(",").map((value) => value.trim()).filter(Boolean),
     registrationDeadline: item.registrationDeadline || null,
     submissionDeadline: item.submissionDeadline || null,
@@ -133,6 +149,10 @@ function mapPublishedEvent(item: PublishedFeedEvent, index: number): Hackathon {
     timezone: item.eventTimezone || null,
     teamSize: item.teamSize || null,
     prize: item.prizeAmount ? item.prizeAmount + " " + (item.prizeCurrency || "") : "Not specified",
+    entryFee: item.entryFee || null,
+    eligibility: item.eligibility || null,
+    sourcePlatforms: item.sourcePlatforms || "",
+    lastCheckedAt: item.lastCheckedAt || null,
     sourceUrl: item.sourceUrl || null,
     officialUrl: item.officialUrl || null,
     verificationStatus: item.verificationStatus || "Auto-discovered",
@@ -241,6 +261,12 @@ function ExplorePage() {
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [feedUpdatedAt, setFeedUpdatedAt] = useState("");
+  const [organizerSubmissionUrl, setOrganizerSubmissionUrl] = useState("");
+  const [sourceHealth, setSourceHealth] = useState<Array<{ name: string; enabled: boolean; status: string; lastCheckedAt?: string }>>([]);
+  const [locationQuery, setLocationQuery] = useState("");
+  const [feeFilter, setFeeFilter] = useState("Any cost");
+  const [deadlineFilter, setDeadlineFilter] = useState("Any deadline");
+  const [sortOrder, setSortOrder] = useState("Closing soon");
 
   useEffect(() => {
     const savedFeedUrl = window.localStorage.getItem("code-nexus-public-feed");
@@ -252,6 +278,8 @@ function ExplorePage() {
         if (cancelled) return;
         setLiveEvents(payload.events.map(mapPublishedEvent));
         setFeedUpdatedAt(payload.generatedAt || "");
+        setOrganizerSubmissionUrl(payload.organizerSubmissionUrl || "");
+        setSourceHealth(payload.sources || []);
         setFeedStatus(payload.events.length + " automatically discovered event(s) loaded.");
       })
       .catch((error) => {
@@ -270,6 +298,8 @@ function ExplorePage() {
       const mapped = payload.events.map(mapPublishedEvent);
       setLiveEvents(mapped);
       setFeedUpdatedAt(payload.generatedAt || "");
+      setOrganizerSubmissionUrl(payload.organizerSubmissionUrl || "");
+      setSourceHealth(payload.sources || []);
       window.localStorage.setItem("code-nexus-public-feed", feedUrl.trim());
       setFeedStatus(mapped.length + " automatically discovered event(s) loaded. Individual records retain their source and verification status.");
       setConnectOpen(false);
@@ -282,12 +312,24 @@ function ExplorePage() {
 
   const allEvents = liveEvents ?? demoEvents;
   const filtered = useMemo(() => allEvents.filter((event) => {
-    const haystack = [event.title, event.organizer, event.summary, ...event.skills].join(" ").toLowerCase();
+    const haystack = [event.title, event.organizer, event.summary, event.location, event.entryFee, event.sourcePlatforms, ...(event.eligibility ? [event.eligibility] : []), ...event.skills].join(" ").toLowerCase();
     const matchesQuery = haystack.includes(query.toLowerCase().trim());
-    const matchesMode = mode === "All formats" || event.mode.toLowerCase() === mode.toLowerCase();
+    const matchesMode = mode === "All formats" || normalizeMode(event.mode) === mode;
     const matchesSkill = skill === "All levels" || event.level.toLowerCase() === skill.toLowerCase();
-    return matchesQuery && matchesMode && matchesSkill;
-  }), [allEvents, query, mode, skill]);
+    const matchesLocation = !locationQuery.trim() || event.location.toLowerCase().includes(locationQuery.trim().toLowerCase());
+    const fee = (event.entryFee || "").trim().toLowerCase();
+    const isFree = fee === "free" || fee === "no fee" || fee === "0" || fee.startsWith("free ");
+    const matchesFee = feeFilter === "Any cost" || (feeFilter === "Free" && isFree) || (feeFilter === "Paid" && !!fee && !isFree && fee !== "not specified");
+    const deadline = event.registrationDeadline || event.eventStart;
+    const deadlineTime = deadline ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(deadline) ? deadline + "T23:59:59" : deadline).getTime() : NaN;
+    const matchesDeadline = deadlineFilter === "Any deadline" || (Number.isFinite(deadlineTime) && deadlineTime >= Date.now() && deadlineTime <= Date.now() + 7 * 86400000);
+    return matchesQuery && matchesMode && matchesSkill && matchesLocation && matchesFee && matchesDeadline;
+  }).sort((left, right) => {
+    if (sortOrder === "A–Z") return left.title.localeCompare(right.title);
+    const leftDate = Date.parse(left.registrationDeadline || left.eventStart || "") || Number.MAX_SAFE_INTEGER;
+    const rightDate = Date.parse(right.registrationDeadline || right.eventStart || "") || Number.MAX_SAFE_INTEGER;
+    return leftDate - rightDate;
+  }), [allEvents, query, mode, skill, locationQuery, feeFilter, deadlineFilter, sortOrder]);
 
   return (
     <main className="page-main">
@@ -299,13 +341,22 @@ function ExplorePage() {
         </div>
         {connectOpen && <form className="connect-panel" onSubmit={connectFeed}><div><b>Connect automatic discovery</b><p>Paste your deployed Google Apps Script web app URL once. The feed refreshes automatically each day after setup.</p></div><label className="sr-only" htmlFor="feed-url">Google Apps Script web app URL</label><input id="feed-url" type="url" value={feedUrl} onChange={(event) => setFeedUrl(event.target.value)} placeholder="https://script.google.com/macros/s/…/exec" required /><button className="button button-primary" disabled={loading}>{loading ? "Connecting…" : "Connect feed"}</button></form>}
         {feedStatus && <div className="feed-status" role="status">{feedStatus}</div>}
+        {liveEvents !== null && <div className="source-health">
+          <div className="source-health-heading"><b>Discovery sources</b><span>Last successful source checks</span></div>
+          <div className="source-health-list">{sourceHealth.filter((source) => source.enabled).map((source) => <span key={source.name} className="source-health-item"><i className={source.status.startsWith("OK") ? "source-health-dot good" : "source-health-dot"} />{source.name}<small>{source.lastCheckedAt ? new Date(source.lastCheckedAt).toLocaleDateString() : "Awaiting first check"}</small></span>)}</div>
+          {organizerSubmissionUrl && <a className="source-submit-link" href={organizerSubmissionUrl} target="_blank" rel="noreferrer">Submit an event for review <ExternalLink size={13} /></a>}
+        </div>}
         <div className="filter-row" data-open={showFilters}>
           <label><span>Format</span><select value={mode} onChange={(event) => setMode(event.target.value)}><option>All formats</option><option>Online</option><option>Hybrid</option><option>In person</option></select></label>
           <label><span>Experience</span><select value={skill} onChange={(event) => setSkill(event.target.value)}><option>All levels</option><option>Beginner friendly</option><option>Intermediate</option><option>Advanced</option></select></label>
-          <button type="button" className="clear-filters" onClick={() => { setQuery(""); setMode("All formats"); setSkill("All levels"); }}>Clear filters</button>
+          <label><span>Location</span><input value={locationQuery} onChange={(event) => setLocationQuery(event.target.value)} placeholder="Country or city" /></label>
+          <label><span>Entry fee</span><select value={feeFilter} onChange={(event) => setFeeFilter(event.target.value)}><option>Any cost</option><option>Free</option><option>Paid</option></select></label>
+          <label><span>Deadline</span><select value={deadlineFilter} onChange={(event) => setDeadlineFilter(event.target.value)}><option>Any deadline</option><option>Closing in 7 days</option></select></label>
+          <label><span>Sort by</span><select value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}><option>Closing soon</option><option>A–Z</option></select></label>
+          <button type="button" className="clear-filters" onClick={() => { setQuery(""); setMode("All formats"); setSkill("All levels"); setLocationQuery(""); setFeeFilter("Any cost"); setDeadlineFilter("Any deadline"); setSortOrder("Closing soon"); }}>Clear filters</button>
         </div>
         {liveEvents === null && <div className="demo-banner"><ShieldCheck size={17} /><span>Demo mode: sample records only. Connect the automatic source feed to load current discovered listings.</span></div>}
-        {filtered.length > 0 ? <div className="event-grid">{filtered.map((event) => <EventCard key={event.id} event={event} live={liveEvents !== null} />)}</div> : <div className="empty-state"><span><Search size={24} /></span><h3>No opportunities match those filters.</h3><p>Try a broader search or clear the selected filters.</p><button className="button button-outline" type="button" onClick={() => { setQuery(""); setMode("All formats"); setSkill("All levels"); }}>Clear all filters</button></div>}
+        {filtered.length > 0 ? <div className="event-grid">{filtered.map((event) => <EventCard key={event.id} event={event} live={liveEvents !== null} />)}</div> : <div className="empty-state"><span><Search size={24} /></span><h3>No opportunities match those filters.</h3><p>Try a broader search or clear the selected filters.</p><button className="button button-outline" type="button" onClick={() => { setQuery(""); setMode("All formats"); setSkill("All levels"); setLocationQuery(""); setFeeFilter("Any cost"); setDeadlineFilter("Any deadline"); setSortOrder("Closing soon"); }}>Clear all filters</button></div>}
       </section>
     </main>
   );
