@@ -206,9 +206,9 @@ function ensureOrganizerIntakeForm_(ss) {
       .setRequired(false);
   }
 
-  // Reapply the response destination on every setup run so a restored form
-  // still points at the active workbook. This does not create duplicate forms.
-  form.setDestination(FormApp.DestinationType.SPREADSHEET, ss.getId());
+  // Form-submit trigger writes directly into OrganizerIntake. Do not attach
+  // the form to the workbook as a response destination, which would create an
+  // extra unneeded response tab.
   form.setAcceptingResponses(true);
 
   const hasTrigger = ScriptApp.getProjectTriggers().some(function (trigger) {
@@ -764,8 +764,15 @@ function cleanText_(value, maxLength) {
 function canonicalUrl_(value) {
   if (!validHttpsUrl_(value)) return "";
   let url = String(value).trim().replace(/#.*$/, "");
-  url = url.replace(/([?&])(utm_[^=]+|fbclid|gclid|mc_cid|mc_eid|ref|referrer)=[^&]*/gi, "");
-  url = url.replace(/\?&/g, "?").replace(/[?&]$/, "");
+  const urlParts = url.split("?");
+  if (urlParts.length > 1) {
+    const query = urlParts.slice(1).join("?").split("&").filter(function (parameter) {
+      const name = String(parameter.split("=")[0] || "").toLowerCase();
+      return !/^utm_/.test(name) &&
+        ["fbclid", "gclid", "mc_cid", "mc_eid", "ref", "referrer"].indexOf(name) === -1;
+    }).join("&");
+    url = urlParts[0] + (query ? "?" + query : "");
+  }
   url = url.replace(/^https:\/\/([^/]+)/i, function (_, host) { return "https://" + host.toLowerCase(); });
   return url.replace(/\/$/, "");
 }
