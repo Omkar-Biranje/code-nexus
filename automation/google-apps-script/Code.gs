@@ -180,7 +180,7 @@ function ensureOrganizerIntakeForm_(ss) {
   }
 
   if (!form) {
-    form = FormApp.create("CODE NEXUS — Submit a hackathon");
+    form = FormApp.create("CODE NEXUS — Submit a hackathon", true);
     properties.setProperty("CN_ORGANIZER_FORM_ID", form.getId());
     form.setDescription(
       "Suggest a public hackathon or builder opportunity for CODE NEXUS. " +
@@ -215,7 +215,9 @@ function ensureOrganizerIntakeForm_(ss) {
     ScriptApp.newTrigger("onOrganizerIntakeSubmit").forForm(form).onFormSubmit().create();
   }
 
-  return form.getPublishedUrl();
+  const publishedUrl = form.getPublishedUrl();
+  properties.setProperty("CN_ORGANIZER_FORM_URL", publishedUrl);
+  return publishedUrl;
 }
 
 /** Queue organizer-submitted URLs for review; never fetch or publish them here. */
@@ -1131,6 +1133,7 @@ function doGet(request) {
     generatedAt: new Date().toISOString(),
     events: events,
     sources: sources,
+    organizerSubmissionUrl: PropertiesService.getScriptProperties().getProperty("CN_ORGANIZER_FORM_URL") || "",
     message: message,
     disclaimer: "Auto-discovered index data. Cross-source matches are not a guarantee of organiser verification; check the original event page before registering.",
   };
