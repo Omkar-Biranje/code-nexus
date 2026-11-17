@@ -7,10 +7,11 @@ Global hackathon discovery and collaboration for students and builders.
 ## First working slice
 
 - Responsive, light-first landing page and public routes.
-- Explore search and filters with clearly labelled demo content until the live feed is connected.
+- Explore search, format, experience, location, entry-fee and near-deadline filters, plus sorting; demo content is clearly labelled until the live feed is connected.
 - Event detail template with registration and submission dates kept separate.
 - Automatic discovery source code using Hackalendar JSON + Brabble hackathons RSS.
-- Daily Apps Script refresh, source attribution, deduplication and cross-source match labels.
+- Daily Apps Script refresh, source attribution, deduplication, conflict detection and event change history.
+- Organizer suggestion form that queues untrusted links for review, separately from automatic feed imports.
 - No authentication, member database, teammate matching or collaboration backend yet.
 
 ## Run the frontend
@@ -27,7 +28,7 @@ GitHub Actions runs the TypeScript/Vite production build and an Apps Script Java
 
 See automation/google-apps-script/README.md and docs/GOOGLE_APPS_SCRIPT_SETUP.md.
 
-One-time owner setup is required to create the Google Sheet, authorize Apps Script, deploy its read-only web app and connect the /exec URL in Explore. After that, the script refreshes daily and no per-event manual entry/review is required.
+One-time owner setup is required to create the Google Sheet, authorize Apps Script, deploy its read-only web app and connect the /exec URL in Explore. After that, feed events refresh daily without per-event manual entry. Organizer suggestions are held separately in a review queue.
 
 Enabled sources: Hackalendar public JSON API and Brabble hackathons RSS. Direct crawlers for Devpost, Hack2Skill, Unstop and Reskilll are not enabled as described in the source guide. Cross-source matches are not a guarantee of organizer verification. Source attribution must remain visible.
 
