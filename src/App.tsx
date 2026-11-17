@@ -85,6 +85,12 @@ function EventCard({ event, live = false }: { event: Hackathon; live?: boolean }
         <p className="event-summary">{event.summary}</p>
         {live && <p className="event-provenance">{event.sourceCount && event.sourceCount > 1 ? "Found in " + event.sourceCount + " indexes" : "Auto-discovered"}{event.sourceNames ? " · " + event.sourceNames : ""}</p>}
         {live && event.sourceConflicts && <p className="event-conflict">Sources disagree on: {event.sourceConflicts}. Check the organizer page before relying on these details.</p>}
+        {live && (event.sourcePlatforms || event.eligibility || event.entryFee || event.teamSize) && <div className="event-context">
+          {event.sourcePlatforms && <span>Platform: {event.sourcePlatforms}</span>}
+          {event.eligibility && <span>Eligibility: {event.eligibility}</span>}
+          {event.entryFee && <span>Entry fee: {event.entryFee}</span>}
+          {event.teamSize && <span>Team: {event.teamSize}</span>}
+        </div>}
         <div className="tag-row">{event.skills.slice(0, 3).map((skill) => <span className="skill-tag" key={skill}>{skill}</span>)}</div>
       </div>
       <div className="event-card-bottom">
@@ -149,7 +155,7 @@ function mapPublishedEvent(item: PublishedFeedEvent, index: number): Hackathon {
     timezone: item.eventTimezone || null,
     teamSize: item.teamSize || null,
     prize: item.prizeAmount ? item.prizeAmount + " " + (item.prizeCurrency || "") : "Not specified",
-    entryFee: item.entryFee || null,
+    entryFee: item.entryFee ? item.entryFee + (item.currency ? " " + item.currency : "") : null,
     eligibility: item.eligibility || null,
     sourcePlatforms: item.sourcePlatforms || "",
     lastCheckedAt: item.lastCheckedAt || null,
@@ -319,7 +325,8 @@ function ExplorePage() {
     const matchesLocation = !locationQuery.trim() || event.location.toLowerCase().includes(locationQuery.trim().toLowerCase());
     const fee = (event.entryFee || "").trim().toLowerCase();
     const isFree = fee === "free" || fee === "no fee" || fee === "0" || fee.startsWith("free ");
-    const matchesFee = feeFilter === "Any cost" || (feeFilter === "Free" && isFree) || (feeFilter === "Paid" && !!fee && !isFree && fee !== "not specified");
+    const unknownFee = ["", "not specified", "unknown", "n/a", "na", "see listing", "varies", "not available", "-"].includes(fee);
+    const matchesFee = feeFilter === "Any cost" || (feeFilter === "Free" && isFree) || (feeFilter === "Paid" && !unknownFee && !isFree);
     const deadline = event.registrationDeadline || event.eventStart;
     const deadlineTime = deadline ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(deadline) ? deadline + "T23:59:59" : deadline).getTime() : NaN;
     const matchesDeadline = deadlineFilter === "Any deadline" || (Number.isFinite(deadlineTime) && deadlineTime >= Date.now() && deadlineTime <= Date.now() + 7 * 86400000);
