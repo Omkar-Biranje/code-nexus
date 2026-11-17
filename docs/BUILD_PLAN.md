@@ -29,38 +29,32 @@ Acceptance: the app builds; public routes and navigation work; mobile/desktop la
 
 Acceptance: access policies are enabled and tested on all private/client-exposed tables; no privileged key appears in browser code; no paid plan is activated.
 
-## Phase 3 — Design system and public shell
-- Responsive navigation/footer, design tokens, accessible components.
-- Home, Explore shell, About, How it works, legal, contact, report, and 404 pages.
-
-Acceptance: mobile/desktop layouts work; navigation resolves; keyboard review passes.
-
-## Phase 4 — Discovery and event details
+## Phase 3 — Discovery engine and event details
 - Search, filters, sorting, pagination, shareable state.
 - Internal event details with source, verification, timezone, separate deadlines, and official registration CTA.
 - Save, compare, report.
 
 Acceptance: filters compose correctly; unknown facts remain unknown; CTA uses verified organizer destination; no fake metrics.
 
-## Phase 5 — Authentication and dashboard
+## Phase 4 — Authentication and dashboard
 - Email/Google auth where supported; profile onboarding and privacy.
 - Saved events, comparisons, notifications, submissions.
 
 Acceptance: members cannot read or mutate another member's private data.
 
-## Phase 6 — Teammates and collaboration
+## Phase 5 — Teammates and collaboration
 - Teammate posts, explainable complementary skill suggestions, invitations, join requests.
 - Teams, projects, tasks, milestones, comments, submission checklist.
 
 Acceptance: team resources isolated by membership; matching explanations are honest.
 
-## Phase 7 — Event ingestion and moderation
+## Phase 6 — Event ingestion and moderation
 - Official feeds/APIs, permitted public URLs, organizer submissions, optional Gmail/Apps Script workflow.
 - Extraction, validation, deduplication, provenance, review, refresh, expiry, change tracking.
 
 Acceptance: published events have traceable source evidence; unknown facts remain null; untrusted sources require review; provider policies and quotas respected.
 
-## Phase 8 — Quality, deployment, operations
+## Phase 7 — Quality, deployment, operations
 - Functional, security, RLS, accessibility, mobile, and performance checks.
 - Export/backup guide, admin runbook, privacy/terms review, deployment.
 - Verify actual free-tier limits and deployment behavior, including the 333,000 monthly web-request hosting cap and Bolt branding.
