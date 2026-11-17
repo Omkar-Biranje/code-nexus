@@ -20,6 +20,7 @@ export type Hackathon = {
   verificationStatus: string;
   sourceNames?: string;
   sourceCount?: number;
+  sourceConflicts?: string;
   attribution?: string;
   isDemo?: boolean;
 };
