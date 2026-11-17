@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronDown, CircleHelp,
   Compass, ExternalLink, Filter, Globe2, Layers3, Menu, Network, Search,
@@ -75,7 +75,7 @@ function EventCard({ event, live = false }: { event: Hackathon; live?: boolean }
     <article className="event-card">
       <div className="event-card-top">
         <span className={live ? "status-pill status-live" : "status-pill status-demo"}>
-          <span className="status-dot" />{live ? (event.verificationStatus || "Published listing") : "Illustrative demo"}
+          <span className="status-dot" />{live ? (event.sourceCount && event.sourceCount > 1 ? "Cross-source match" : "Auto-discovered") : "Illustrative demo"}
         </span>
         <span className="event-mode">{event.mode || "Mode not specified"}</span>
       </div>
@@ -83,6 +83,7 @@ function EventCard({ event, live = false }: { event: Hackathon; live?: boolean }
         <p className="event-organizer">{event.organizer || "Organizer not specified"}</p>
         <h3>{event.title}</h3>
         <p className="event-summary">{event.summary}</p>
+        {live && <p className="event-provenance">{event.sourceCount && event.sourceCount > 1 ? "Found in " + event.sourceCount + " indexes" : "Auto-discovered"}{event.sourceNames ? " · " + event.sourceNames : ""}</p>}
         <div className="tag-row">{event.skills.slice(0, 3).map((skill) => <span className="skill-tag" key={skill}>{skill}</span>)}</div>
       </div>
       <div className="event-card-bottom">
@@ -92,9 +93,9 @@ function EventCard({ event, live = false }: { event: Hackathon; live?: boolean }
         </div>
         {event.isDemo ? (
           <Link className="text-link" to={"/hackathons/" + event.slug}>View details <ArrowRight size={15} /></Link>
-        ) : event.officialUrl ? (
-          <a className="text-link" href={event.officialUrl} target="_blank" rel="noreferrer">Official page <ExternalLink size={14} /></a>
-        ) : <span className="muted-small">Official URL not supplied</span>}
+        ) : (event.officialUrl || event.sourceUrl) ? (
+          <a className="text-link" href={event.officialUrl || event.sourceUrl || undefined} target="_blank" rel="noreferrer">{event.officialUrl ? "Official event page" : "View source listing"} <ExternalLink size={14} /></a>
+        ) : <span className="muted-small">Source link not supplied</span>}
       </div>
     </article>
   );
@@ -133,7 +134,10 @@ function mapPublishedEvent(item: PublishedFeedEvent, index: number): Hackathon {
     prize: item.prizeAmount ? item.prizeAmount + " " + (item.prizeCurrency || "") : "Not specified",
     sourceUrl: item.sourceUrl || null,
     officialUrl: item.officialUrl || null,
-    verificationStatus: item.verificationStatus || "Published",
+    verificationStatus: item.verificationStatus || "Auto-discovered",
+    sourceNames: item.sourceNames || "",
+    sourceCount: Number(item.sourceCount) || 1,
+    attribution: item.attribution || "",
     isDemo: false,
   };
 }
@@ -234,17 +238,38 @@ function ExplorePage() {
   const [feedStatus, setFeedStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [feedUpdatedAt, setFeedUpdatedAt] = useState("");
+
+  useEffect(() => {
+    const savedFeedUrl = window.localStorage.getItem("code-nexus-public-feed");
+    if (!savedFeedUrl) return;
+    let cancelled = false;
+    setLoading(true);
+    loadGoogleFeed(savedFeedUrl)
+      .then((payload) => {
+        if (cancelled) return;
+        setLiveEvents(payload.events.map(mapPublishedEvent));
+        setFeedUpdatedAt(payload.generatedAt || "");
+        setFeedStatus(payload.events.length + " automatically discovered event(s) loaded.");
+      })
+      .catch((error) => {
+        if (!cancelled) setFeedStatus(error instanceof Error ? error.message : "Automatic feed could not be loaded.");
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   async function connectFeed(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
-    setFeedStatus("Connecting to the published Google Sheet feed…");
+    setFeedStatus("Connecting to the CODE NEXUS automatic discovery feed…");
     try {
       const payload = await loadGoogleFeed(feedUrl.trim());
       const mapped = payload.events.map(mapPublishedEvent);
       setLiveEvents(mapped);
+      setFeedUpdatedAt(payload.generatedAt || "");
       window.localStorage.setItem("code-nexus-public-feed", feedUrl.trim());
-      setFeedStatus(mapped.length + " published event(s) received. Candidate records remain private until approved.");
+      setFeedStatus(mapped.length + " automatically discovered event(s) loaded. Individual records retain their source and verification status.");
       setConnectOpen(false);
     } catch (error) {
       setFeedStatus(error instanceof Error ? error.message : "Could not connect to the Google feed.");
@@ -267,17 +292,17 @@ function ExplorePage() {
       <section className="explore-hero"><div className="container"><p className="section-kicker">THE OPPORTUNITY BOARD</p><h1>Find your next <em>challenge.</em></h1><p>Search opportunities by what you want to learn, build and explore.</p><div className="explore-search"><Search size={19} /><input aria-label="Search events" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search hackathons, skills, themes…" /><button className="button button-dark" type="button" onClick={() => setShowFilters(!showFilters)}><Filter size={15} /> Filters <ChevronDown size={14} /></button></div></div></section>
       <section className="section explore-content container">
         <div className="explore-toolbar">
-          <div><span className="result-count">{filtered.length} {filtered.length === 1 ? "opportunity" : "opportunities"}</span><span className="result-context">{liveEvents === null ? "Illustrative demo records" : "Published from Google Sheets"}</span></div>
-          <button className="button button-outline button-small" type="button" onClick={() => setConnectOpen(!connectOpen)}><Globe2 size={15} /> {liveEvents === null ? "Connect Google Sheet" : "Feed connected"}</button>
+          <div><span className="result-count">{filtered.length} {filtered.length === 1 ? "opportunity" : "opportunities"}</span><span className="result-context">{liveEvents === null ? "Illustrative demo records" : "Automatically discovered · source-attributed"}</span></div>
+          <button className="button button-outline button-small" type="button" onClick={() => setConnectOpen(!connectOpen)}><Globe2 size={15} /> {liveEvents === null ? "Connect discovery feed" : "Discovery feed connected"}</button>
         </div>
-        {connectOpen && <form className="connect-panel" onSubmit={connectFeed}><div><b>Connect the public event feed</b><p>Paste the deployed Google Apps Script web app URL. Only approved, published rows are returned.</p></div><label className="sr-only" htmlFor="feed-url">Google Apps Script web app URL</label><input id="feed-url" type="url" value={feedUrl} onChange={(event) => setFeedUrl(event.target.value)} placeholder="https://script.google.com/macros/s/…/exec" required /><button className="button button-primary" disabled={loading}>{loading ? "Connecting…" : "Connect feed"}</button></form>}
+        {connectOpen && <form className="connect-panel" onSubmit={connectFeed}><div><b>Connect automatic discovery</b><p>Paste your deployed Google Apps Script web app URL once. The feed refreshes automatically each day after setup.</p></div><label className="sr-only" htmlFor="feed-url">Google Apps Script web app URL</label><input id="feed-url" type="url" value={feedUrl} onChange={(event) => setFeedUrl(event.target.value)} placeholder="https://script.google.com/macros/s/…/exec" required /><button className="button button-primary" disabled={loading}>{loading ? "Connecting…" : "Connect feed"}</button></form>}
         {feedStatus && <div className="feed-status" role="status">{feedStatus}</div>}
         <div className="filter-row" data-open={showFilters}>
           <label><span>Format</span><select value={mode} onChange={(event) => setMode(event.target.value)}><option>All formats</option><option>Online</option><option>Hybrid</option><option>In person</option></select></label>
           <label><span>Experience</span><select value={skill} onChange={(event) => setSkill(event.target.value)}><option>All levels</option><option>Beginner friendly</option><option>Intermediate</option><option>Advanced</option></select></label>
           <button type="button" className="clear-filters" onClick={() => { setQuery(""); setMode("All formats"); setSkill("All levels"); }}>Clear filters</button>
         </div>
-        {liveEvents === null && <div className="demo-banner"><ShieldCheck size={17} /><span>Demo mode: every card below is illustrative and is not a real or verified event.</span></div>}
+        {liveEvents === null && <div className="demo-banner"><ShieldCheck size={17} /><span>Demo mode: sample records only. Connect the automatic source feed to load current discovered listings.</span></div>}
         {filtered.length > 0 ? <div className="event-grid">{filtered.map((event) => <EventCard key={event.id} event={event} live={liveEvents !== null} />)}</div> : <div className="empty-state"><span><Search size={24} /></span><h3>No opportunities match those filters.</h3><p>Try a broader search or clear the selected filters.</p><button className="button button-outline" type="button" onClick={() => { setQuery(""); setMode("All formats"); setSkill("All levels"); }}>Clear all filters</button></div>}
       </section>
     </main>
