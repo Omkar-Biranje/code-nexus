@@ -19,7 +19,7 @@ Last updated: 2026-11-17
 - Hosting: Bolt Free with a public .bolt.host URL; Bolt branding and a 333,000 monthly web-request limit apply.
 - Source control: existing private GitHub repository Omkar-Biranje/code-nexus; GitHub is the durable source of truth.
 - Frontend: React + TypeScript + Vite; Tailwind CSS; React Router; lucide-react.
-- Google discovery pipeline: Google Sheets + bound Apps Script. It automatically fetches Hackalendar JSON and Brabble hackathons RSS daily, deduplicates, cross-matches, auto-publishes source-attributed records, and exposes a read-only feed. It does not read Gmail. Direct Hack2Skill/Reskilll crawlers are disabled pending permission/feed; direct Devpost crawling is disabled by its published terms; Unstop is used via Brabble for now.
+- Google discovery pipeline code: Google Sheets + bound Apps Script. The committed source is designed to fetch Hackalendar JSON and Brabble hackathons RSS daily, deduplicate/cross-match, retain attribution, track material changes and expose a read-only feed. The source has not yet been authorized or deployed in the owner's Google account. It also creates an organizer suggestion form whose submissions are held for review. It does not read Gmail. Direct Hack2Skill/Reskilll crawlers are disabled pending permission/feed; direct Devpost crawling is disabled by its published terms; Unstop listings may arrive via Brabble.
 - Supabase is not selected for the initial build: Bolt's native Supabase integration is listed as Pro/Teams-only in the provider decision checked 2026-11-17.
 - No OpenAI API dependency required for the initial build.
 - Decision details and dated official sources: docs/AI_BUILDER_DECISION.md
@@ -43,20 +43,39 @@ Last updated: 2026-11-17
 - Auto-discovered and cross-source corroborated are discovery labels, not guarantees of organizer verification. Preserve source attribution and official source links; unknown facts stay blank. Never present aggregator data as independently verified by CODE NEXUS.
 
 ## Current implementation status — 2026-11-17
-- [x] Private GitHub repository, permissions, and main branch verified.
-- [x] Product, architecture, build, AI-builder and master-prompt documentation added and preserved.
-- [x] Public application source scaffold committed to main in commit d6637a40939263dc75b5ba6bc8619c2153619400.
-- [x] Landing page, responsive navigation, Explore filters, illustrative event cards/details, informational routes, and Google feed connection control added in source.
-- [x] Google Apps Script feed-intake source and setup guide committed to main in commit 9e888603d98cbdc4f47db352261c6a34900a8bfd.
-- [x] GitHub Actions dependency install, TypeScript check and Vite production build passed for commit 2e23405e9b4214951234fc9a652db876736e3bf0; latest crawler/provenance edits need a fresh CI pass.
-- [x] Apps Script automatic discovery source added with daily schedule, attribution, dedupe and cross-index matching.
-- [ ] Confirm Bolt imported workspace has pulled the new GitHub commits and two-way sync is working.
-- [ ] Create and authorize the Google Sheet, run the preconfigured Hackalendar + Brabble sources, verify the daily trigger, and deploy the read-only endpoint.
-- [ ] Connect the deployed endpoint in Explore and verify only approved Published + Verified rows are returned.
-- [ ] Backend/auth, member profiles, teammate matching, collaboration and full admin tools.
+
+### First product slice (approximately the requested first 20%)
+- [x] Private GitHub repository, owner permissions and main branch verified.
+- [x] React + TypeScript + Vite frontend foundation and responsive landing/navigation.
+- [x] Public Explore search and filters for format, experience, location, entry fee and near deadlines; closing-soon/A–Z sorting.
+- [x] Illustrative event-card/detail foundations; demo records are visibly labelled and not presented as live.
+- [x] Global event data foundations: country/city, timezone, separate registration/submission/event dates, fee/currency, prize, team size, skills and eligibility where supplied.
+- [x] Feed connection UI, source status, last-check visibility, source/platform context, attribution and conflict warnings.
+- [x] Apps Script adapters for Hackalendar JSON and Brabble RSS, exact endpoint allowlists, blocked redirects, bounded fetches, deduplication, cross-source matching and retention of prior records after temporary fetch failures.
+- [x] Daily refresh trigger definition and read-only JSON/JSONP publisher source.
+- [x] Organizer suggestion form and review-queue definition, separate from automatic feed imports.
+- [x] Event history for new records and material changes; cancelled/known-expired records excluded from the public snapshot.
+- [x] Deterministic tests for source allowlists, canonical URLs, event identity, unknown fields and expiry.
+- [x] Setup documentation and source-policy limitations updated.
+
+### Not yet live / remaining in this milestone
+- [ ] Owner creates the Google Sheet, authorizes Sheets + Forms + URL Fetch, runs setupCodeNexus, and confirms the first successful fetch and both triggers.
+- [ ] Owner deploys the read-only Apps Script web app and connects its /exec URL in Explore.
+- [ ] Confirm the new commits have synced into the imported Bolt workspace.
+- [ ] Browser preview and visual QA on desktop/mobile, including live-feed empty/error/loading behavior.
+- [ ] Do not publish the public website yet; publication is intentionally deferred.
+
+### Later phases
+- [ ] Backend, authentication, profiles, saved events and comparisons.
+- [ ] Teammate discovery/matching, team formation, invitations and project workspace.
+- [ ] Internal organizer dashboard, moderator/admin tools, submission workflow and report handling.
+- [ ] Production security/accessibility/performance QA, privacy/legal review and deployment.
+
+The "first 20%" is a planning milestone, not a measured percentage of production completeness.
 
 ## Workflow
 At each phase: state scope, make changes, report files, report tests actually run, give browser-only test steps, update this file and docs/BUILD_PLAN.md, and stop for approval before the next major phase or any account/security-sensitive action.
 
 ## Presentation milestone boundary
-The frontend source has passed a GitHub Actions TypeScript/Vite production build at commit 2e23405e9b4214951234fc9a652db876736e3bf0. Later crawler/provenance edits still need a fresh CI check. It has not yet been browser-previewed, hosted, or connected to a live Google Sheet. The Explore page uses illustrative demo records until the owner completes one-time Apps Script authorization, deployment and URL connection. Do not describe the crawler as live until its first fetch and daily trigger are verified.
+
+The public discovery foundation and automation source are committed to the private GitHub repository. GitHub Actions now includes Apps Script syntax, deterministic discovery tests and the TypeScript/Vite production build. The project has not been browser-previewed, hosted or connected to a live Google Sheet. Explore remains in illustrative demo mode until the owner completes Google authorization, first fetch, trigger verification, deployment and feed connection. Do not describe discovery as live until these account-side checks pass.
