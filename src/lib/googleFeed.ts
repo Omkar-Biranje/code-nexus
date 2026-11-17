@@ -20,6 +20,9 @@ export type PublishedFeedEvent = {
   officialUrl?: string;
   sourceUrl?: string;
   verificationStatus?: string;
+  sourceNames?: string;
+  sourceCount?: number;
+  attribution?: string;
   lastCheckedAt?: string;
 };
 
@@ -27,6 +30,8 @@ export type GoogleFeedResponse = {
   ok: boolean;
   generatedAt?: string;
   events: PublishedFeedEvent[];
+  sources?: Array<{ name: string; enabled: boolean; status: string; lastCheckedAt?: string }>;
+  disclaimer?: string;
   message?: string;
 };
 
