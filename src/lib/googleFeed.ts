@@ -22,6 +22,7 @@ export type PublishedFeedEvent = {
   verificationStatus?: string;
   sourceNames?: string;
   sourceCount?: number;
+  sourceConflicts?: string;
   attribution?: string;
   lastCheckedAt?: string;
 };
